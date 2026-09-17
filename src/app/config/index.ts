@@ -1,0 +1,26 @@
+import dotenv from "dotenv";
+import path from "path";
+
+dotenv.config({ path: path.join(process.cwd(), ".env") });
+
+export default {
+  node_env: process.env.NODE_ENV,
+  port: process.env.PORT,
+  database_url: process.env.DATABASE_URL,
+  backend_url: process.env.BACKEND_URL,
+  frontend_url: process.env.FRONTEND_URL,
+  test_admin_name: process.env.TEST_ADMIN_NAME as string,
+  test_admin_email: process.env.TEST_ADMIN_EMAIL as string,
+  test_admin_password: process.env.TEST_ADMIN_PASSWORD as string,
+  test_courier_name: process.env.TEST_COURIER_NAME as string,
+  test_courier_email: process.env.TEST_COURIER_EMAIL as string,
+  test_courier_password: process.env.TEST_COURIER_PASSWORD as string,
+  bcrypt_salt_rounds: process.env.BCRYPT_SALT_ROUNDS,
+  redis_username: process.env.REDIS_USERNAME,
+  redis_password: process.env.REDIS_PASSWORD,
+  redis_host: process.env.REDIS_HOST,
+  redis_port: process.env.REDIS_PORT,
+  email_sender: process.env.EMAIL_SENDER,
+  smtp_user: process.env.SMTP_USER,
+  smtp_password: process.env.SMTP_PASSWORD,
+};

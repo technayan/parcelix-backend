@@ -1,0 +1,13 @@
+model Zone {
+    id                   String     @id @default(uuid())
+    name                 String
+    area                 String
+    status               ZoneStatus @default(ACTIVE)
+    createdAt            DateTime   @default(now())
+    updatedAt            DateTime   @updatedAt
+    hubs                 Hub[]
+    originShipments      Shipment[] @relation("OriginZone")
+    destinationShipments Shipment[] @relation("DestinationZone")
+
+    @@map("zones")
+}

@@ -1,0 +1,8 @@
+model TrackingShipment {
+    id         String                 @id @default(uuid())
+    shipmentId String                 @unique
+    shipment   Shipment               @relation(fields: [shipmentId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    status     TrackingShipmentStatus @default(PICKED_UP)
+
+    @@map("trackingShipments")
+}

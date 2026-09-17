@@ -1,0 +1,38 @@
+model Shipment {
+    id                 String             @id @default(uuid())
+    trackingId         String             @unique
+    courierId          String
+    courier            Courier            @relation(fields: [courierId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    customerId         String
+    customer           Customer           @relation(fields: [customerId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    originZoneId       String
+    originZone         Zone               @relation("OriginZone", fields: [originZoneId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    originHubId        String
+    originHub          Hub                @relation("OriginHub", fields: [originHubId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    destinationZoneId  String
+    destinationZone    Zone               @relation("DestinationZone", fields: [destinationZoneId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    destinationHubId   String
+    destinationHub     Hub                @relation("DestinationHub", fields: [destinationHubId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    senderName         String
+    senderPhone        String
+    senderAddress      String
+    receiverName       String
+    receiverPhone      String
+    receiverAddress    String
+    weight             Decimal            @db.Decimal(8, 2)
+    description        String?
+    deliveryFee        Decimal            @db.Decimal(8, 2)
+    isFragile          Boolean            @default(false)
+    status             ShipmentStatus     @default(PENDING_PAYMENT)
+    pickupDate         DateTime?
+    pickupInstructions String?
+    returnReason       String?
+    invoiceUrl         String?
+    invoicePublicId    String?
+    createdAt          DateTime           @default(now())
+    updatedAt          DateTime           @updatedAt
+    trackings          TrackingShipment[]
+    payment            Payment?
+
+    @@map("shipments")
+}

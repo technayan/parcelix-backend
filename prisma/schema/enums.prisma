@@ -1,0 +1,69 @@
+enum AuthProvider {
+    CREDENTIALS
+    GOOGLE
+}
+
+enum Role {
+    CUSTOMER
+    COURIER
+    ADMIN
+}
+
+enum UserStatus {
+    ACTIVE
+    BLOCKED
+    DELETED
+}
+
+enum CourierAvailabilityStatus {
+    AVAILABLE
+    BUSY
+}
+
+enum CourierVerificationStatus {
+    PENDING
+    APPROVED
+    REJECTED
+}
+
+enum ZoneStatus {
+    ACTIVE
+    INACTIVE
+}
+
+enum HubStatus {
+    ACTIVE
+    INACTIVE
+}
+
+enum ShipmentStatus {
+    PENDING_PAYMENT
+    PAID
+    PICKUP_REQUESTED
+    COURIER_ASSIGNED
+    PICKED_UP
+    AT_ORIGIN_HUB
+    IN_TRANSIT
+    AT_DESTINATION_HUB
+    OUT_FOR_DELIVERY
+    DELIVERED
+    DELIVERY_FAILED
+    RETURNED
+    CANCELLED
+}
+
+enum TrackingShipmentStatus {
+    PICKED_UP
+    AT_ORIGIN_HUB
+    IN_TRANSIT
+    AT_DESTINATION_HUB
+    OUT_FOR_DELIVERY
+    DELIVERED
+    DELIVERY_FAILED
+    RETURNED
+    CANCELLED
+}
+
+enum PaymentMethod {
+    BKASH
+}
