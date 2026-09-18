@@ -12,12 +12,49 @@ const registerCustomer = catchAsync(async (req: Request, res: Response) => {
 
   sendResponse(res, {
     success: true,
-    statusCode: httpStatus.CREATED,
-    message: "Register successfully.",
+    statusCode: httpStatus.OK,
+    message:
+      "The verification OTP has been sent to your email. Please, verify the email to register.",
     data: null,
+  });
+});
+
+//* Email Verification
+const verifyEmail = catchAsync(async (req: Request, res: Response) => {
+  const payload = req.body;
+
+  const result = await AuthServices.emailVerification(payload);
+
+  const { accessToken, refreshToken, user, customer } = result;
+
+  res.cookie("accessToken", accessToken, {
+    httpOnly: true,
+    secure: false,
+    sameSite: "none",
+    maxAge: 1000 * 60 * 60 * 24, // 24 hour or 1 day
+  });
+
+  res.cookie("refreshToken", refreshToken, {
+    httpOnly: true,
+    secure: false,
+    sameSite: "none",
+    maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
+  });
+
+  sendResponse(res, {
+    statusCode: httpStatus.CREATED,
+    success: true,
+    message: "User registered and email verified successfully.",
+    data: {
+      accessToken,
+      refreshToken,
+      user,
+      customer,
+    },
   });
 });
 
 export const AuthController = {
   registerCustomer,
+  verifyEmail,
 };

@@ -5,3 +5,8 @@ export interface IRegisterCustomerPayload {
   phone?: string;
   address?: string;
 }
+
+export interface IEmailVerificationPayload {
+  email: string;
+  otp: string;
+}

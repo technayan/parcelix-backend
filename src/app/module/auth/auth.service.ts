@@ -2,13 +2,19 @@ import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import ejs from "ejs";
 import httpStatus from "http-status";
+import { SignOptions } from "jsonwebtoken";
 import path from "path";
+import { Role, UserStatus } from "../../../generated/prisma/enums";
 import config from "../../config";
 import { transporter } from "../../lib/nodemailer";
 import { prisma } from "../../lib/prisma";
 import { redisClient } from "../../lib/redis";
 import { AppError } from "../../utils/AppError";
-import { IRegisterCustomerPayload } from "./auth.interface";
+import { jwtUtils } from "../../utils/jwt";
+import {
+  IEmailVerificationPayload,
+  IRegisterCustomerPayload,
+} from "./auth.interface";
 
 //* Register
 const RegisterIntoDB = async (payload: IRegisterCustomerPayload) => {
@@ -75,6 +81,96 @@ const RegisterIntoDB = async (payload: IRegisterCustomerPayload) => {
   });
 };
 
+//* Email Verification
+const emailVerification = async (payload: IEmailVerificationPayload) => {
+  const { email, otp } = payload;
+
+  const isUserExist = await prisma.user.findUnique({
+    where: { email },
+  });
+
+  if (isUserExist?.emailVerified) {
+    throw new AppError(httpStatus.BAD_REQUEST, "Email is already verified.");
+  }
+
+  if (isUserExist?.status === UserStatus.BLOCKED) {
+    throw new AppError(httpStatus.FORBIDDEN, "User is blocked.");
+  }
+
+  if (isUserExist?.isDeleted) {
+    throw new AppError(httpStatus.NOT_FOUND, "User is deleted.");
+  }
+
+  const verificationKey = `parcelix-email-verification-otp:${email}`;
+  const redisVerificationOtp = await redisClient.get(verificationKey);
+
+  if (!redisVerificationOtp) {
+    throw new AppError(httpStatus.BAD_REQUEST, "Invalid OTP.");
+  }
+
+  if (redisVerificationOtp !== otp) {
+    throw new AppError(httpStatus.BAD_REQUEST, "OTP did not matched.");
+  }
+
+  const userInfoKey = `parcelix-user-info:${email}`;
+  const userInfo = await redisClient.get(userInfoKey);
+
+  if (!userInfo) {
+    throw new AppError(httpStatus.NOT_FOUND, "User data is not found!");
+  }
+
+  const userData: IRegisterCustomerPayload = JSON.parse(userInfo);
+
+  const createdUser = await prisma.user.create({
+    data: {
+      name: userData.name,
+      email: userData.email,
+      password: userData.password,
+      phone: userData?.phone,
+      emailVerified: true,
+      role: Role.CUSTOMER,
+      customer: {
+        create: {
+          address: userData?.address,
+        },
+      },
+    },
+    omit: { password: true },
+    include: { customer: true },
+  });
+
+  await redisClient.del([verificationKey, userInfoKey]);
+
+  const { customer, ...user } = createdUser;
+
+  const jwtPayload = {
+    userId: user.id,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+  };
+
+  const accessToken = jwtUtils.createToken(
+    jwtPayload,
+    config.jwt_access_secret,
+    config.jwt_access_expires_in as SignOptions,
+  );
+
+  const refreshToken = jwtUtils.createToken(
+    jwtPayload,
+    config.jwt_refresh_secret,
+    config.jwt_refresh_expires_in as SignOptions,
+  );
+
+  return {
+    user,
+    customer,
+    accessToken,
+    refreshToken,
+  };
+};
+
 export const AuthServices = {
   RegisterIntoDB,
+  emailVerification,
 };
