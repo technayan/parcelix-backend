@@ -1,15 +1,17 @@
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import ejs from "ejs";
+import httpStatus from "http-status";
 import path from "path";
 import config from "../../config";
 import { transporter } from "../../lib/nodemailer";
 import { prisma } from "../../lib/prisma";
 import { redisClient } from "../../lib/redis";
+import { AppError } from "../../utils/AppError";
 import { IRegisterCustomerPayload } from "./auth.interface";
 
 //* Register
-const RegisterCustomerIntoDB = async (payload: IRegisterCustomerPayload) => {
+const RegisterIntoDB = async (payload: IRegisterCustomerPayload) => {
   const { name, password } = payload;
   const email = payload.email.trim().toLowerCase();
 
@@ -18,7 +20,10 @@ const RegisterCustomerIntoDB = async (payload: IRegisterCustomerPayload) => {
   });
 
   if (isUserExist) {
-    throw new Error("User with this email is already exists!");
+    throw new AppError(
+      httpStatus.CONFLICT,
+      "User with this email is already exists!",
+    );
   }
 
   const hashedPassword = await bcrypt.hash(
@@ -71,5 +76,5 @@ const RegisterCustomerIntoDB = async (payload: IRegisterCustomerPayload) => {
 };
 
 export const AuthServices = {
-  RegisterCustomerIntoDB,
+  RegisterIntoDB,
 };

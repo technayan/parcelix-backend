@@ -8,7 +8,7 @@ import { AuthServices } from "./auth.service";
 const registerCustomer = catchAsync(async (req: Request, res: Response) => {
   const payload = req.body;
 
-  await AuthServices.RegisterCustomerIntoDB(payload);
+  await AuthServices.RegisterIntoDB(payload);
 
   sendResponse(res, {
     success: true,
