@@ -37,6 +37,7 @@ const RegisterIntoDB = async (payload: IRegisterCustomerPayload) => {
     Number(config.bcrypt_salt_rounds),
   );
 
+  // Store in Redis
   const expirationSeconds = 5 * 60;
 
   const verificationKey = `parcelix-email-verification-otp:${email}`;
@@ -62,6 +63,7 @@ const RegisterIntoDB = async (payload: IRegisterCustomerPayload) => {
     },
   });
 
+  // Send OTP Email
   const templatePath = path.join(
     process.cwd(),
     "src/app/templates/email-verification.ejs",
@@ -101,6 +103,7 @@ const emailVerification = async (payload: IEmailVerificationPayload) => {
     throw new AppError(httpStatus.NOT_FOUND, "User is deleted.");
   }
 
+  // Get Redis Data and verify
   const verificationKey = `parcelix-email-verification-otp:${email}`;
   const redisVerificationOtp = await redisClient.get(verificationKey);
 
@@ -121,6 +124,7 @@ const emailVerification = async (payload: IEmailVerificationPayload) => {
 
   const userData: IRegisterCustomerPayload = JSON.parse(userInfo);
 
+  // Create user into Database
   const createdUser = await prisma.user.create({
     data: {
       name: userData.name,
@@ -139,7 +143,26 @@ const emailVerification = async (payload: IEmailVerificationPayload) => {
     include: { customer: true },
   });
 
+  // Clear Redis data
   await redisClient.del([verificationKey, userInfoKey]);
+
+  // Send welcome email
+  const templatePath = path.join(
+    process.cwd(),
+    "src/app/templates/welcome-email.ejs",
+  );
+
+  const html = await ejs.renderFile(templatePath, {
+    name: createdUser.name,
+    url: config.backend_url,
+  });
+
+  await transporter.sendMail({
+    from: config.email_sender,
+    subject: "Welcome to Parcelix",
+    to: createdUser.email,
+    html,
+  });
 
   const { customer, ...user } = createdUser;
 
