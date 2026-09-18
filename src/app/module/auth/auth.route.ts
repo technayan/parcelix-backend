@@ -6,9 +6,9 @@ import { authValidation } from "./auth.validation";
 const router = Router();
 
 router.post(
-  "/register",
-  validateRequest(authValidation.RegistrationZodSchema),
-  AuthController.registerCustomer,
+	"/register",
+	validateRequest(authValidation.RegistrationZodSchema),
+	AuthController.registerCustomer,
 );
 
 router.post("/email-verification", AuthController.verifyEmail);
