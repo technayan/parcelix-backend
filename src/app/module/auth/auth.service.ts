@@ -13,9 +13,11 @@ import { AppError } from "../../utils/AppError";
 import { jwtUtils } from "../../utils/jwt";
 import type {
   IEmailVerificationPayload,
+  IForgotPasswordPayload,
   ILoginPayload,
   IRegisterCustomerPayload,
   IRequestUser,
+  IResetPasswordPayload,
 } from "./auth.interface";
 
 //* Register
@@ -308,10 +310,148 @@ const refreshToken = async (token: string) => {
   };
 };
 
+//* Forgot Password
+const forgotPassword = async (payload: IForgotPasswordPayload) => {
+  const { email } = payload;
+
+  const user = await prisma.user.findUnique({
+    where: { email },
+  });
+
+  if (!user) {
+    throw new AppError(httpStatus.NOT_FOUND, "User not found!");
+  }
+
+  if (user.status === UserStatus.BLOCKED) {
+    throw new AppError(
+      httpStatus.FORBIDDEN,
+      "Your account is blocked. Please, contact support.",
+    );
+  }
+
+  if (user.isDeleted || user.status === UserStatus.DELETED) {
+    throw new AppError(httpStatus.NOT_FOUND, "User is deleted.");
+  }
+
+  if (!user.emailVerified) {
+    throw new AppError(httpStatus.UNAUTHORIZED, "User email is not verified!");
+  }
+
+  if (user.googleId && user.authProvider === "GOOGLE") {
+    throw new AppError(httpStatus.BAD_REQUEST, "You have account with Google.");
+  }
+
+  const otp = crypto.randomInt(100000, 1000000).toString();
+
+  const key = `parcelix-forgot-password-otp:${user.email}`;
+
+  const expirationSeconds = 5 * 60;
+
+  await redisClient.set(key, otp, {
+    expiration: {
+      type: "EX",
+      value: expirationSeconds,
+    },
+  });
+
+  const templatePath = path.join(
+    process.cwd(),
+    "src/app/templates/forgot-password-email.ejs",
+  );
+
+  const html = await ejs.renderFile(templatePath, {
+    name: user.name,
+    otp,
+    expirationMinutes: expirationSeconds / 60,
+  });
+
+  await transporter.sendMail({
+    from: config.email_sender,
+    subject: "Forgot Password OTP",
+    to: user.email,
+    html,
+  });
+};
+
+//* Reset Password
+const resetPassword = async (payload: IResetPasswordPayload) => {
+  const { email, otp, newPassword } = payload;
+
+  const user = await prisma.user.findUnique({
+    where: { email },
+  });
+
+  if (!user) {
+    throw new AppError(httpStatus.NOT_FOUND, "User not found!");
+  }
+
+  if (user.status === UserStatus.BLOCKED) {
+    throw new AppError(
+      httpStatus.FORBIDDEN,
+      "Your account is blocked. Please, contact support.",
+    );
+  }
+
+  if (user.isDeleted || user.status === UserStatus.DELETED) {
+    throw new AppError(httpStatus.NOT_FOUND, "User is deleted.");
+  }
+
+  if (!user.emailVerified) {
+    throw new AppError(httpStatus.UNAUTHORIZED, "User email is not verified!");
+  }
+
+  if (user.googleId && user.authProvider === "GOOGLE") {
+    throw new AppError(httpStatus.BAD_REQUEST, "You have account with Google.");
+  }
+
+  const key = `parcelix-forgot-password-otp:${user.email}`;
+
+  const redisOtp = await redisClient.get(key);
+
+  if (!redisOtp) {
+    throw new AppError(httpStatus.BAD_REQUEST, "OTP does not exist.");
+  }
+
+  if (redisOtp !== otp) {
+    throw new AppError(httpStatus.BAD_REQUEST, "Invalid OTP");
+  }
+
+  const hashedPassword = await bcrypt.hash(
+    newPassword,
+    Number(config.bcrypt_salt_rounds),
+  );
+
+  await prisma.user.update({
+    where: { email: user.email },
+    data: {
+      password: hashedPassword,
+    },
+  });
+
+  const templatePath = path.join(
+    process.cwd(),
+    "/src/app/templates/reset-password.ejs",
+  );
+
+  const html = await ejs.renderFile(templatePath, {
+    name: user.name,
+    loginUrl: config.backend_url,
+  });
+
+  await transporter.sendMail({
+    from: config.email_sender,
+    subject: "Password Reset Successful - Parcelix",
+    to: user.email,
+    html,
+  });
+};
+
 export const AuthServices = {
   RegisterIntoDB,
   emailVerification,
   login,
   getProfile,
   refreshToken,
+  forgotPassword,
+  resetPassword,
 };

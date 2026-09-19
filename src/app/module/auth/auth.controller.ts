@@ -125,10 +125,40 @@ const refreshToken = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+//* Forgot Password
+const forgotPassword = catchAsync(async (req: Request, res: Response) => {
+  const payload = req.body;
+
+  await AuthServices.forgotPassword(payload);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: `OTP send to ${payload.email} successfully.`,
+    data: null,
+  });
+});
+
+//* Reset Password
+const resetPassword = catchAsync(async (req: Request, res: Response) => {
+  const payload = req.body;
+
+  await AuthServices.resetPassword(payload);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: `Password changed successfully.`,
+    data: null,
+  });
+});
+
 export const AuthController = {
   registerCustomer,
   verifyEmail,
   login,
   getProfile,
   refreshToken,
+  forgotPassword,
+  resetPassword,
 };
