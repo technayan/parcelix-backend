@@ -2,7 +2,7 @@ import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import ejs from "ejs";
 import httpStatus from "http-status";
-import type { SignOptions } from "jsonwebtoken";
+import type { JwtPayload, SignOptions } from "jsonwebtoken";
 import path from "path";
 import { Role, UserStatus } from "../../../generated/prisma/enums";
 import config from "../../config";
@@ -254,9 +254,64 @@ const getProfile = async (user: IRequestUser) => {
   return isUserExists;
 };
 
+//* Refresh Token
+const refreshToken = async (token: string) => {
+  const verifiedRefreshToken = jwtUtils.verifyToken(
+    token,
+    config.jwt_refresh_secret,
+  );
+
+  if (!verifiedRefreshToken.success || !verifiedRefreshToken.data) {
+    throw new AppError(
+      httpStatus.UNAUTHORIZED,
+      config.node_env === "development"
+        ? verifiedRefreshToken.error
+        : "Invalid refresh Token",
+    );
+  }
+
+  const data = verifiedRefreshToken.data as JwtPayload;
+
+  const user = await prisma.user.findUnique({
+    where: { id: data.userId },
+  });
+
+  if (!user || user.isDeleted || user.status !== UserStatus.ACTIVE) {
+    throw new AppError(
+      httpStatus.UNAUTHORIZED,
+      "User is inactive or not found",
+    );
+  }
+
+  const jwtPayload = {
+    userId: user.id,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+  };
+
+  const newAccessToken = jwtUtils.createToken(
+    jwtPayload,
+    config.jwt_access_secret,
+    config.jwt_access_expires_in as SignOptions,
+  );
+
+  const newRefreshToken = jwtUtils.createToken(
+    jwtPayload,
+    config.jwt_refresh_secret,
+    config.jwt_refresh_expires_in as SignOptions,
+  );
+
+  return {
+    newAccessToken,
+    newRefreshToken,
+  };
+};
+
 export const AuthServices = {
   RegisterIntoDB,
   emailVerification,
   login,
   getProfile,
+  refreshToken,
 };

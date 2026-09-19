@@ -93,9 +93,42 @@ const getProfile = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+//* Refresh Token
+const refreshToken = catchAsync(async (req: Request, res: Response) => {
+  if (!req.cookies.refreshToken) {
+    throw new AppError(httpStatus.UNAUTHORIZED, "Refresh token is missing");
+  }
+  const result = await AuthServices.refreshToken(req.cookies.refreshToken);
+  const { newAccessToken, newRefreshToken } = result;
+
+  res.cookie("accessToken", newAccessToken, {
+    httpOnly: true,
+    secure: false,
+    sameSite: "none",
+    maxAge: 1000 * 60 * 60 * 24, // 24 hour or 1 day
+  });
+  res.cookie("refreshToken", newRefreshToken, {
+    httpOnly: true,
+    secure: false,
+    sameSite: "none",
+    maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
+  });
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "New tokens generated successfully",
+    data: {
+      accessToken: newAccessToken,
+      refreshToken: newRefreshToken,
+    },
+  });
+});
+
 export const AuthController = {
   registerCustomer,
   verifyEmail,
   login,
   getProfile,
+  refreshToken,
 };
