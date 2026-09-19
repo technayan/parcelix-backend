@@ -1,7 +1,9 @@
 import type { Request, Response } from "express";
 import httpStatus from "http-status";
+import { AppError } from "../../utils/AppError";
 import { catchAsync } from "../../utils/catchAsync";
 import { sendResponse } from "../../utils/sendResponse";
+import type { IRequestUser } from "./auth.interface";
 import { AuthServices } from "./auth.service";
 
 //* Register
@@ -70,8 +72,30 @@ const login = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+//* Get Profile
+const getProfile = catchAsync(async (req: Request, res: Response) => {
+  const user = req.user as unknown as IRequestUser;
+
+  if (!user) {
+    throw new AppError(
+      httpStatus.UNAUTHORIZED,
+      "User information is missing in the request.",
+    );
+  }
+
+  const result = await AuthServices.getProfile(user);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "User profile fetched successfully.",
+    data: result,
+  });
+});
+
 export const AuthController = {
   registerCustomer,
   verifyEmail,
   login,
+  getProfile,
 };

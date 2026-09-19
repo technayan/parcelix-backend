@@ -15,6 +15,7 @@ import type {
   IEmailVerificationPayload,
   ILoginPayload,
   IRegisterCustomerPayload,
+  IRequestUser,
 } from "./auth.interface";
 
 //* Register
@@ -235,8 +236,27 @@ const login = async (payload: ILoginPayload) => {
   };
 };
 
+//* Get Profile
+const getProfile = async (user: IRequestUser) => {
+  const isUserExists = await prisma.user.findUnique({
+    where: { id: user.userId },
+    include: {
+      customer: true,
+      courier: true,
+    },
+    omit: { password: true },
+  });
+
+  if (!isUserExists) {
+    throw new AppError(httpStatus.NOT_FOUND, "User not found!");
+  }
+
+  return isUserExists;
+};
+
 export const AuthServices = {
   RegisterIntoDB,
   emailVerification,
   login,
+  getProfile,
 };
