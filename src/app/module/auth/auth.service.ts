@@ -1,11 +1,17 @@
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import ejs from "ejs";
+import type { TokenPayload } from "google-auth-library";
 import httpStatus from "http-status";
 import type { JwtPayload, SignOptions } from "jsonwebtoken";
 import path from "path";
-import { Role, UserStatus } from "../../../generated/prisma/enums";
+import {
+  AuthProvider,
+  Role,
+  UserStatus,
+} from "../../../generated/prisma/enums";
 import config from "../../config";
+import { googleClient } from "../../lib/googleAuth";
 import { transporter } from "../../lib/nodemailer";
 import { prisma } from "../../lib/prisma";
 import { redisClient } from "../../lib/redis";
@@ -14,6 +20,7 @@ import { jwtUtils } from "../../utils/jwt";
 import type {
   IEmailVerificationPayload,
   IForgotPasswordPayload,
+  IGoogleLoginPayload,
   ILoginPayload,
   IRegisterCustomerPayload,
   IRequestUser,
@@ -446,6 +453,161 @@ const resetPassword = async (payload: IResetPasswordPayload) => {
   });
 };
 
+//* Google Login
+const googleLogin = async (payload: IGoogleLoginPayload) => {
+  let googleIdTokenPayload: TokenPayload | null | undefined = null;
+  try {
+    const ticket = await googleClient.verifyIdToken({
+      idToken: payload.idToken,
+      audience: config.google_client_id,
+    });
+
+    googleIdTokenPayload = ticket.getPayload();
+  } catch (error) {
+    console.log("Google ID Token Verification Failed", error);
+    throw new AppError(
+      httpStatus.UNAUTHORIZED,
+      "Invalid Or Expired Google Id Token",
+    );
+  }
+
+  if (!googleIdTokenPayload) {
+    throw new AppError(
+      httpStatus.UNAUTHORIZED,
+      "Invalid Or Expired Google Id Token",
+    );
+  }
+
+  if (!googleIdTokenPayload.email) {
+    throw new AppError(httpStatus.BAD_REQUEST, "Google Email Not Found");
+  }
+  if (!googleIdTokenPayload.name) {
+    throw new AppError(
+      httpStatus.BAD_REQUEST,
+      "Google Email User Name Not Found",
+    );
+  }
+
+  const ifCustomerExistWithGoogleAuth = await prisma.user.findUnique({
+    where: {
+      email: googleIdTokenPayload.email,
+      role: Role.CUSTOMER,
+      googleId: googleIdTokenPayload.sub,
+    },
+  });
+
+  let user = ifCustomerExistWithGoogleAuth;
+
+  if (!ifCustomerExistWithGoogleAuth) {
+    const ifCustomerExistWithCredentials = await prisma.user.findUnique({
+      where: {
+        email: googleIdTokenPayload.email,
+        role: Role.CUSTOMER,
+        authProvider: AuthProvider.CREDENTIALS,
+      },
+    });
+
+    if (ifCustomerExistWithCredentials) {
+      if (!ifCustomerExistWithCredentials.emailVerified) {
+        throw new AppError(httpStatus.FORBIDDEN, "Email Not Verified");
+      }
+
+      if (ifCustomerExistWithCredentials.status === UserStatus.BLOCKED) {
+        throw new AppError(httpStatus.FORBIDDEN, "User Is Blocked");
+      }
+
+      if (
+        ifCustomerExistWithCredentials.isDeleted ||
+        ifCustomerExistWithCredentials.status === UserStatus.DELETED
+      ) {
+        throw new AppError(httpStatus.FORBIDDEN, "User Is Deleted");
+      }
+
+      user = await prisma.user.update({
+        where: {
+          id: ifCustomerExistWithCredentials.id,
+        },
+
+        data: {
+          googleId: googleIdTokenPayload.sub,
+        },
+      });
+    } else {
+      // Google Register
+      user = await prisma.user.create({
+        data: {
+          name: googleIdTokenPayload.name,
+          email: googleIdTokenPayload.email,
+          role: Role.CUSTOMER,
+          googleId: googleIdTokenPayload.sub,
+          authProvider: AuthProvider.GOOGLE,
+          emailVerified: true,
+          customer: {
+            create: {
+              address: null,
+            },
+          },
+        },
+      });
+      const tempatePath = path.join(
+        process.cwd(),
+        "src/app/templates/welcome-email.ejs",
+      );
+
+      const html = await ejs.renderFile(tempatePath, {
+        name: user.name,
+        url: config.backend_url,
+      });
+
+      await transporter.sendMail({
+        from: config.email_sender,
+        to: user.email,
+        subject: "Welcome To Parcelix",
+        html,
+      });
+    }
+  }
+
+  if (!user) {
+    throw new AppError(httpStatus.NOT_FOUND, "User Not Found");
+  }
+
+  if (user.status === UserStatus.BLOCKED) {
+    throw new AppError(
+      httpStatus.FORBIDDEN,
+      "User Is Blocked. Contact support.",
+    );
+  }
+
+  if (user.isDeleted || user.status === UserStatus.DELETED) {
+    throw new AppError(httpStatus.FORBIDDEN, "User Is Deleted");
+  }
+
+  const jwtPayload = {
+    userId: user.id,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+  };
+
+  const accessToken = jwtUtils.createToken(
+    jwtPayload,
+    config.jwt_access_secret,
+    config.jwt_access_expires_in as SignOptions,
+  );
+
+  const refreshToken = jwtUtils.createToken(
+    jwtPayload,
+    config.jwt_refresh_secret,
+    config.jwt_refresh_expires_in as SignOptions,
+  );
+
+  return {
+    accessToken,
+    refreshToken,
+  };
+};
+
 export const AuthServices = {
   RegisterIntoDB,
   emailVerification,
@@ -454,4 +616,5 @@ export const AuthServices = {
   refreshToken,
   forgotPassword,
   resetPassword,
+  googleLogin,
 };

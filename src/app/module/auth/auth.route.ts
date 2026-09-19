@@ -29,4 +29,6 @@ router.post("/forgot-password", AuthController.forgotPassword);
 
 router.post("/reset-password", AuthController.resetPassword);
 
+router.post("/google", AuthController.googleLogin);
+
 export const AuthRoutes = router;
