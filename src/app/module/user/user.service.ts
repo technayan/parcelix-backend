@@ -1,8 +1,10 @@
+import type { UploadApiResponse } from "cloudinary";
 import httpStatus from "http-status";
 import { Role, UserStatus } from "../../../generated/prisma/enums";
+import { cloudinary } from "../../lib/cloudinary";
 import { prisma } from "../../lib/prisma";
 import { AppError } from "../../utils/AppError";
-import { IUpdateUserPayload } from "./user.interface";
+import type { IUpdateUserPayload } from "./user.interface";
 
 //* Update User
 const updateUserIntoDB = async (
@@ -75,6 +77,65 @@ const updateUserIntoDB = async (
   return transactionResult;
 };
 
+//* Upload Profile Photo
+const uploadProfilePhotoIntoDB = async (buffer: Buffer, userId: string) => {
+  const currentUser = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      profilePhoto: true,
+      profilePhotoPublicId: true,
+    },
+  });
+
+  if (!currentUser) {
+    throw new AppError(httpStatus.NOT_FOUND, "User not found!");
+  }
+
+  const cloudinaryResult = await new Promise<UploadApiResponse>(
+    (resolve, reject) => {
+      cloudinary.uploader
+        .upload_stream(
+          {
+            resource_type: "auto",
+          },
+          (error, result) => {
+            if (error) {
+              return reject(error);
+            }
+
+            if (!result) {
+              return reject(
+                new AppError(
+                  httpStatus.INTERNAL_SERVER_ERROR,
+                  "Error while file uploading.",
+                ),
+              );
+            }
+
+            return resolve(result);
+          },
+        )
+        .end(buffer);
+    },
+  );
+
+  const updatedUser = await prisma.user.update({
+    where: { id: userId },
+    data: {
+      profilePhoto: cloudinaryResult?.secure_url,
+      profilePhotoPublicId: cloudinaryResult.public_id,
+    },
+    omit: { password: true },
+  });
+
+  if (currentUser?.profilePhotoPublicId && currentUser.profilePhoto) {
+    await cloudinary.uploader.destroy(currentUser.profilePhotoPublicId);
+  }
+
+  return updatedUser;
+};
+
 export const UserServices = {
   updateUserIntoDB,
+  uploadProfilePhotoIntoDB,
 };

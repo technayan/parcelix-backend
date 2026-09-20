@@ -1,5 +1,6 @@
 import type { Request, Response } from "express";
 import httpStatus from "http-status";
+import { AppError } from "../../utils/AppError";
 import { catchAsync } from "../../utils/catchAsync";
 import { sendResponse } from "../../utils/sendResponse";
 import { UserServices } from "./user.service";
@@ -19,6 +20,26 @@ const updateUser = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+//* Upload Profile Photo
+const uploadProfilePhoto = catchAsync(async (req: Request, res: Response) => {
+  if (!req.file)
+    throw new AppError(httpStatus.BAD_REQUEST, "No file provided.");
+  const userId = req.user?.userId as string;
+
+  const result = await UserServices.uploadProfilePhotoIntoDB(
+    req.file.buffer,
+    userId,
+  );
+
+  sendResponse(res, {
+    success: true,
+    statusCode: httpStatus.CREATED,
+    message: "Profile photo uploaded successfully.",
+    data: result,
+  });
+});
+
 export const UserController = {
   updateUser,
+  uploadProfilePhoto,
 };
