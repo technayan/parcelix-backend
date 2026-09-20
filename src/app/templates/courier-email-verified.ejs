@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+
+    <title>Email Verified - Parcelix</title>
+
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        background-color: #f8fafc;
+        font-family: Arial, Helvetica, sans-serif;
+        color: #0f172a;
+      }
+
+      table {
+        border-spacing: 0;
+        border-collapse: collapse;
+      }
+
+      img {
+        border: 0;
+        display: block;
+      }
+
+      .email-wrapper {
+        width: 100%;
+        background-color: #f8fafc;
+        padding: 40px 16px;
+      }
+
+      .email-container {
+        width: 100%;
+        max-width: 600px;
+        margin: 0 auto;
+        background-color: #ffffff;
+        border-radius: 14px;
+        overflow: hidden;
+        border: 1px solid #e2e8f0;
+      }
+
+      /* Header */
+
+      .header {
+        background-color: #0f172a;
+        padding: 28px 24px;
+        text-align: center;
+      }
+
+      .logo {
+        margin: 0;
+        font-size: 30px;
+        line-height: 1;
+        font-weight: 700;
+        letter-spacing: -0.8px;
+        color: #ffffff !important;
+      }
+
+      .logo span {
+        color: #f97316;
+      }
+
+      /* Content */
+
+      .content {
+        padding: 40px 36px;
+      }
+
+      .success-icon {
+        width: 64px;
+        height: 64px;
+        margin: 0 auto 24px;
+        background-color: #ecfdf5;
+        border-radius: 50%;
+        text-align: center;
+        color: #10b981;
+        font-size: 32px;
+        line-height: 64px;
+        font-weight: 700;
+      }
+
+      .title {
+        margin: 0 0 16px;
+        text-align: center;
+        font-size: 26px;
+        line-height: 1.3;
+        font-weight: 700;
+        color: #0f172a;
+      }
+
+      .greeting {
+        margin: 0 0 18px;
+        font-size: 16px;
+        line-height: 1.7;
+        color: #334155;
+      }
+
+      .message {
+        margin: 0 0 24px;
+        font-size: 15px;
+        line-height: 1.7;
+        color: #64748b;
+      }
+
+      /* Verification Success */
+
+      .verification-box {
+        margin: 28px 0;
+        padding: 20px;
+        background-color: #f0fdf4;
+        border: 1px solid #bbf7d0;
+        border-left: 4px solid #10b981;
+        border-radius: 8px;
+      }
+
+      .verification-title {
+        margin: 0 0 8px;
+        font-size: 15px;
+        font-weight: 700;
+        color: #166534;
+      }
+
+      .verification-text {
+        margin: 0;
+        font-size: 14px;
+        line-height: 1.6;
+        color: #64748b;
+      }
+
+      /* Courier Application */
+
+      .application-box {
+        margin: 28px 0;
+        padding: 20px;
+        background-color: #fff7ed;
+        border: 1px solid #fed7aa;
+        border-left: 4px solid #f97316;
+        border-radius: 8px;
+      }
+
+      .application-title {
+        margin: 0 0 8px;
+        font-size: 15px;
+        font-weight: 700;
+        color: #0f172a;
+      }
+
+      .application-text {
+        margin: 0;
+        font-size: 14px;
+        line-height: 1.6;
+        color: #64748b;
+      }
+
+      .status {
+        display: inline-block;
+        margin-top: 12px;
+        padding: 6px 12px;
+        background-color: #ffedd5;
+        color: #c2410c;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      /* Button */
+
+      .button-wrapper {
+        text-align: center;
+        margin: 30px 0;
+      }
+
+      .button {
+        display: inline-block;
+        padding: 13px 28px;
+        background-color: #f97316;
+        color: #ffffff !important;
+        text-decoration: none;
+        font-size: 15px;
+        font-weight: 700;
+        border-radius: 8px;
+      }
+
+      /* Closing */
+
+      .closing {
+        margin: 28px 0 0;
+        font-size: 15px;
+        line-height: 1.7;
+        color: #334155;
+      }
+
+      /* Footer */
+
+      .footer {
+        padding: 24px;
+        background-color: #f8fafc;
+        border-top: 1px solid #e2e8f0;
+        text-align: center;
+      }
+
+      .footer-text {
+        margin: 0 0 8px;
+        font-size: 12px;
+        line-height: 1.6;
+        color: #94a3b8;
+      }
+
+      .footer-brand {
+        margin: 0;
+        font-size: 13px;
+        font-weight: 700;
+        color: #334155;
+      }
+
+      .footer-brand span {
+        color: #f97316;
+      }
+
+      /* Mobile */
+
+      @media only screen and (max-width: 600px) {
+        .email-wrapper {
+          padding: 20px 10px;
+        }
+
+        .content {
+          padding: 32px 22px;
+        }
+
+        .title {
+          font-size: 23px;
+        }
+
+        .logo {
+          font-size: 27px;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <table role="presentation" width="100%">
+      <tr>
+        <td class="email-wrapper">
+          <table
+            role="presentation"
+            class="email-container"
+            align="center"
+            width="100%"
+          >
+            <!-- Header -->
+
+            <tr>
+              <td class="header">
+                <h1 class="logo">Parcel<span>ix</span></h1>
+              </td>
+            </tr>
+
+            <!-- Content -->
+
+            <tr>
+              <td class="content">
+                <!-- Success Icon -->
+
+                <div class="success-icon">✓</div>
+
+                <!-- Title -->
+
+                <h2 class="title">Email Verified Successfully!</h2>
+
+                <!-- Greeting -->
+
+                <p class="greeting">Hello <strong><%= name %></strong>,</p>
+
+                <!-- Message -->
+
+                <p class="message">
+                  Great news! Your email address has been successfully verified.
+                  Your Parcelix courier application is now ready to review.
+                </p>
+
+                <!-- Courier Application -->
+
+                <div class="application-box">
+                  <p class="application-title">
+                    Your courier application is under review
+                  </p>
+
+                  <p class="application-text">
+                    Your courier application has been received and is currently
+                    pending review by the Parcelix team. Our team will review
+                    your application and notify you by email once a decision has
+                    been made within three working days.
+                  </p>
+
+                  <span class="status"> PENDING REVIEW </span>
+                </div>
+
+                <!-- Closing -->
+
+                <p class="closing">
+                  Thank you for choosing Parcelix and for your interest in
+                  becoming a courier. We appreciate your patience while your
+                  application is being reviewed.
+                </p>
+
+                <p class="closing">
+                  Best regards,<br />
+                  <strong>The Parcelix Team</strong>
+                </p>
+              </td>
+            </tr>
+
+            <!-- Footer -->
+
+            <tr>
+              <td class="footer">
+                <p class="footer-text">
+                  You will receive another email once your courier application
+                  has been reviewed.
+                </p>
+
+                <p class="footer-brand">
+                  © <%= new Date().getFullYear() %> Parcel<span>ix</span>. All
+                  rights reserved.
+                </p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

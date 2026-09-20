@@ -204,10 +204,17 @@ const login = async (payload: ILoginPayload) => {
     throw new AppError(httpStatus.NOT_FOUND, "User is deleted");
   }
 
-  if (user?.password === null || user?.googleId !== null) {
+  if (user?.password === null && user?.googleId !== null) {
     throw new AppError(
       httpStatus.BAD_REQUEST,
       "This user is registered with Google.",
+    );
+  }
+
+  if (user?.password === null && user?.googleId === null) {
+    throw new AppError(
+      httpStatus.BAD_REQUEST,
+      "This user is not approved yet.",
     );
   }
 
