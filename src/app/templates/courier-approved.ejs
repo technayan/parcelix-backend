@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Courier Application Approved - Parcelix</title>
+
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        background-color: #f8fafc;
+        font-family: Inter, Arial, Helvetica, sans-serif;
+        color: #0f172a;
+      }
+
+      table {
+        border-collapse: collapse;
+      }
+
+      .email-wrapper {
+        width: 100%;
+        background-color: #f8fafc;
+        padding: 40px 20px;
+      }
+
+      .container {
+        max-width: 600px;
+        margin: 0 auto;
+        background-color: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        overflow: hidden;
+      }
+
+      .header {
+        background-color: #0f172a;
+        padding: 26px 30px;
+        text-align: center;
+      }
+
+      .logo {
+        margin: 0;
+        font-size: 28px;
+        font-weight: 700;
+        letter-spacing: -0.5px;
+        color: #ffffff !important;
+      }
+
+      .logo span {
+        color: #f97316;
+      }
+
+      .content {
+        padding: 45px 40px;
+      }
+
+      .success-icon-wrapper {
+        width: 64px;
+        height: 64px;
+        margin: 0 auto 24px;
+        background-color: #ecfdf5;
+        border-radius: 50%;
+        text-align: center;
+      }
+
+      .success-icon {
+        color: #10b981;
+        font-size: 34px;
+        font-weight: 700;
+        line-height: 64px;
+      }
+
+      .title {
+        margin: 0 0 16px;
+        text-align: center;
+        font-size: 28px;
+        line-height: 36px;
+        font-weight: 700;
+        color: #0f172a;
+      }
+
+      .subtitle {
+        margin: 0 0 28px;
+        text-align: center;
+        font-size: 15px;
+        line-height: 24px;
+        color: #64748b;
+      }
+
+      .greeting {
+        margin: 0 0 14px;
+        font-size: 16px;
+        line-height: 26px;
+        color: #0f172a;
+      }
+
+      .message {
+        margin: 0 0 24px;
+        font-size: 15px;
+        line-height: 25px;
+        color: #475569;
+      }
+
+      .success-box {
+        margin: 28px 0;
+        padding: 20px;
+        background-color: #ecfdf5;
+        border: 1px solid #a7f3d0;
+        border-radius: 12px;
+      }
+
+      .success-box-title {
+        margin: 0 0 8px;
+        font-size: 15px;
+        font-weight: 700;
+        color: #047857;
+      }
+
+      .success-box-text {
+        margin: 0;
+        font-size: 14px;
+        line-height: 22px;
+        color: #065f46;
+      }
+
+      .credentials-box {
+        margin: 28px 0;
+        padding: 24px;
+        background-color: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+      }
+
+      .credentials-title {
+        margin: 0 0 18px;
+        font-size: 17px;
+        font-weight: 700;
+        color: #0f172a;
+      }
+
+      .credential-row {
+        padding: 12px 0;
+        border-bottom: 1px solid #e2e8f0;
+      }
+
+      .credential-row:last-child {
+        border-bottom: none;
+      }
+
+      .credential-label {
+        display: block;
+        margin-bottom: 5px;
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #64748b;
+      }
+
+      .credential-value {
+        display: block;
+        font-size: 15px;
+        font-weight: 600;
+        color: #0f172a;
+        word-break: break-word;
+      }
+
+      .password-value {
+        font-family: monospace;
+        letter-spacing: 1px;
+        color: #f97316;
+      }
+
+      .security-box {
+        margin: 24px 0;
+        padding: 18px;
+        background-color: #fff7ed;
+        border: 1px solid #fed7aa;
+        border-radius: 12px;
+      }
+
+      .security-title {
+        margin: 0 0 7px;
+        font-size: 14px;
+        font-weight: 700;
+        color: #c2410c;
+      }
+
+      .security-text {
+        margin: 0;
+        font-size: 13px;
+        line-height: 21px;
+        color: #9a3412;
+      }
+
+      .button-wrapper {
+        text-align: center;
+        margin: 30px 0 10px;
+      }
+
+      .button {
+        display: inline-block;
+        padding: 13px 28px;
+        background-color: #f97316;
+        color: #ffffff !important;
+        text-decoration: none;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 700;
+      }
+
+      .closing {
+        margin: 28px 0 0;
+        font-size: 15px;
+        line-height: 25px;
+        color: #475569;
+      }
+
+      .footer {
+        padding: 24px 30px;
+        background-color: #f8fafc;
+        border-top: 1px solid #e2e8f0;
+        text-align: center;
+      }
+
+      .footer-text {
+        margin: 0;
+        font-size: 12px;
+        line-height: 20px;
+        color: #94a3b8;
+      }
+
+      .footer-brand {
+        color: #0f172a;
+        font-weight: 700;
+      }
+
+      .footer-brand span {
+        color: #f97316;
+      }
+
+      @media only screen and (max-width: 600px) {
+        .email-wrapper {
+          padding: 20px 12px;
+        }
+
+        .content {
+          padding: 35px 24px;
+        }
+
+        .title {
+          font-size: 24px;
+          line-height: 32px;
+        }
+
+        .credentials-box {
+          padding: 20px;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="email-wrapper">
+      <div class="container">
+        <!-- Header -->
+        <div class="header">
+          <h1 class="logo">Parcel<span>ix</span></h1>
+        </div>
+
+        <!-- Content -->
+        <div class="content">
+          <div class="success-icon-wrapper">
+            <div class="success-icon">✓</div>
+          </div>
+
+          <h2 class="title">Welcome to Parcelix!</h2>
+
+          <p class="subtitle">Your courier application has been approved.</p>
+
+          <p class="greeting">Hello <strong><%= name %></strong>,</p>
+
+          <p class="message">
+            Great news! Your courier application has been reviewed and approved
+            by the Parcelix team. Welcome to the Parcelix courier network.
+          </p>
+
+          <!-- Approval -->
+          <div class="success-box">
+            <p class="success-box-title">✓ Courier Application Approved</p>
+
+            <p class="success-box-text">
+              Your courier account is now active and you can sign in using the
+              credentials provided below.
+            </p>
+          </div>
+
+          <!-- Credentials -->
+          <div class="credentials-box">
+            <h3 class="credentials-title">Your Login Credentials</h3>
+
+            <div class="credential-row">
+              <span class="credential-label"> Email </span>
+
+              <span class="credential-value"> <%= email %> </span>
+            </div>
+
+            <div class="credential-row">
+              <span class="credential-label"> Temporary Password </span>
+
+              <span class="credential-value password-value">
+                <%= password %>
+              </span>
+            </div>
+          </div>
+
+          <!-- Security Notice -->
+          <div class="security-box">
+            <p class="security-title">🔒 Important Security Notice</p>
+
+            <p class="security-text">
+              This password was generated for your Parcelix account. Please sign
+              in and change your password as soon as possible. Never share your
+              login credentials with anyone.
+            </p>
+          </div>
+
+          <!-- CTA -->
+          <div class="button-wrapper">
+            <a href="<%= loginUrl %>" class="button"> Sign in to Parcelix </a>
+          </div>
+
+          <p class="closing">
+            We're excited to have you on board. You can now access your courier
+            account and start your journey with Parcelix.
+          </p>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+          <p class="footer-text">
+            © <%= new Date().getFullYear() %>
+            <span class="footer-brand"> Parcel<span>ix</span> </span>. All
+            rights reserved.
+          </p>
+
+          <p class="footer-text">
+            This is an automated email. Please do not reply directly to this
+            message.
+          </p>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

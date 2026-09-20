@@ -34,7 +34,23 @@ const verifyCourierEmail = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+//* Review Courier
+const reviewCourier = catchAsync(async (req: Request, res: Response) => {
+  const payload = req.body;
+  const userId = req.user?.userId as string;
+
+  const result = await CourierServices.reviewCourier(payload, userId);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Courier Application Reviewed Successfully",
+    data: result,
+  });
+});
+
 export const CourierController = {
   applyAsCourier,
   verifyCourierEmail,
+  reviewCourier,
 };

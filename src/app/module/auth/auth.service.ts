@@ -381,7 +381,7 @@ const forgotPassword = async (payload: IForgotPasswordPayload) => {
 
   await transporter.sendMail({
     from: config.email_sender,
-    subject: "Forgot Password OTP",
+    subject: "Reset Password OTP",
     to: user.email,
     html,
   });

@@ -1,9 +1,13 @@
+import bcrypt from "bcryptjs";
 import type { UploadApiResponse } from "cloudinary";
 import crypto from "crypto";
 import ejs from "ejs";
 import httpStatus from "http-status";
 import path from "path";
-import { Role } from "../../../generated/prisma/enums";
+import {
+  CourierVerificationStatus,
+  Role,
+} from "../../../generated/prisma/enums";
 import config from "../../config";
 import { cloudinary } from "../../lib/cloudinary";
 import { transporter } from "../../lib/nodemailer";
@@ -12,6 +16,7 @@ import { redisClient } from "../../lib/redis";
 import { AppError } from "../../utils/AppError";
 import type {
   IApplyAsCourierPayload,
+  IApproveCourierPayload,
   IVerifyCourierEmailPayload,
 } from "./courier.interface";
 
@@ -178,7 +183,149 @@ const verifyCourierEmail = async (payload: IVerifyCourierEmailPayload) => {
   return verifiedUser;
 };
 
+//* Review Courier
+const reviewCourier = async (
+  payload: IApproveCourierPayload,
+  userId: string,
+) => {
+  const transactionResult = await prisma.$transaction(async (tx) => {
+    const reviewer = await tx.user.findUnique({
+      where: { id: userId },
+      omit: { password: true },
+    });
+
+    if (!reviewer) {
+      throw new AppError(httpStatus.NOT_FOUND, "Reviewer not found!");
+    }
+
+    if (reviewer.role !== Role.ADMIN) {
+      throw new AppError(
+        httpStatus.FORBIDDEN,
+        "You have no permission to review any applications.",
+      );
+    }
+
+    const { courierId, verificationStatus, rejectionReason } = payload;
+
+    const existingCourier = await tx.courier.findUnique({
+      where: { id: courierId },
+      include: { user: true },
+    });
+
+    if (!existingCourier || existingCourier.user.isDeleted) {
+      throw new AppError(
+        httpStatus.NOT_FOUND,
+        "Courier application not found!",
+      );
+    }
+
+    if (!existingCourier.user.emailVerified) {
+      throw new AppError(
+        httpStatus.BAD_REQUEST,
+        "Courier has not verified their email yet. Application cannot be reviewed.",
+      );
+    }
+
+    if (
+      existingCourier.verificationStatus !== CourierVerificationStatus.PENDING
+    ) {
+      throw new AppError(
+        httpStatus.CONFLICT,
+        `Courier application has already been ${existingCourier.verificationStatus.toLowerCase()}`,
+      );
+    }
+
+    if (
+      verificationStatus === CourierVerificationStatus.REJECTED &&
+      !rejectionReason
+    ) {
+      throw new AppError(
+        httpStatus.BAD_REQUEST,
+        "Rejection reason is required when rejecting a courier application",
+      );
+    }
+
+    const updatedCourier = await tx.courier.update({
+      where: { id: courierId },
+      data: {
+        verificationStatus,
+        rejectionReason:
+          verificationStatus === CourierVerificationStatus.REJECTED
+            ? rejectionReason
+            : null,
+        reviewedAt: new Date(),
+      },
+      include: {
+        user: {
+          omit: { password: true },
+        },
+      },
+    });
+
+    if (verificationStatus === CourierVerificationStatus.REJECTED) {
+      const tempatePath = path.join(
+        process.cwd(),
+        `src/app/templates/courier-rejected.ejs`,
+      );
+
+      const html = await ejs.renderFile(tempatePath, {
+        name: updatedCourier.user.name,
+        rejectionReason,
+      });
+
+      await transporter.sendMail({
+        from: config.email_sender,
+        to: updatedCourier.user.email,
+        subject: "Courier Application Not Approved",
+        html,
+      });
+
+      return updatedCourier;
+    }
+
+    // Aapply Generated Password to the Courier Account
+    const randomCourierPassword = Math.random().toString(36).slice(-8);
+
+    const hashedPassword = await bcrypt.hash(
+      randomCourierPassword,
+      Number(config.bcrypt_salt_rounds),
+    );
+
+    const updatedUser = await tx.user.update({
+      where: { id: updatedCourier.userId },
+      data: {
+        password: hashedPassword,
+      },
+      omit: { password: true },
+    });
+
+    const tempatePath = path.join(
+      process.cwd(),
+      `src/app/templates/courier-approved.ejs`,
+    );
+
+    const html = await ejs.renderFile(tempatePath, {
+      name: updatedUser.name,
+      email: updatedUser.email,
+      password: randomCourierPassword,
+      loginUrl: config.backend_url,
+    });
+
+    await transporter.sendMail({
+      from: config.email_sender,
+      to: updatedUser.email,
+      subject: "Courier Application Approved",
+      html,
+    });
+
+    return updatedCourier;
+  });
+
+  return transactionResult;
+};
+
 export const CourierServices = {
   applyAsCourier,
   verifyCourierEmail,
+  reviewCourier,
 };
