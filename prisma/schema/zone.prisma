@@ -1,6 +1,6 @@
 model Zone {
     id                   String     @id @default(uuid())
-    name                 String
+    name                 String     @unique
     area                 String
     status               ZoneStatus @default(ACTIVE)
     createdAt            DateTime   @default(now())

@@ -8,9 +8,9 @@ import { authValidation } from "./auth.validation";
 const router = Router();
 
 router.post(
-  "/register",
-  validateRequest(authValidation.RegistrationZodSchema),
-  AuthController.registerCustomer,
+	"/register",
+	validateRequest(authValidation.RegistrationZodSchema),
+	AuthController.registerCustomer,
 );
 
 router.post("/email-verification", AuthController.verifyEmail);
@@ -18,9 +18,9 @@ router.post("/email-verification", AuthController.verifyEmail);
 router.post("/login", AuthController.login);
 
 router.get(
-  "/profile",
-  auth(Role.ADMIN, Role.COURIER, Role.CUSTOMER),
-  AuthController.getProfile,
+	"/profile",
+	auth(Role.ADMIN, Role.COURIER, Role.CUSTOMER),
+	AuthController.getProfile,
 );
 
 router.post("/refresh-token", AuthController.refreshToken);

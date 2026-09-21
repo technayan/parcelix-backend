@@ -1,7 +1,7 @@
 import type { NextFunction, Request, Response } from "express";
 import httpStatus from "http-status";
 import type { JwtPayload } from "jsonwebtoken";
-import type { Role } from "../../generated/prisma/enums";
+import { type Role, UserStatus } from "../../generated/prisma/enums";
 import config from "../config";
 import { prisma } from "../lib/prisma";
 import type { IRequestUser } from "../module/auth/auth.interface";
@@ -63,10 +63,17 @@ export const auth = (...requiredRoles: Role[]) => {
       );
     }
 
-    if (user.status === "BLOCKED") {
+    if (user.status === UserStatus.BLOCKED) {
       throw new AppError(
         httpStatus.FORBIDDEN,
         "Your account has been blocked. Please contact support.",
+      );
+    }
+
+    if (user.isDeleted && user.status === UserStatus.DELETED) {
+      throw new AppError(
+        httpStatus.NOT_FOUND,
+        "Your account has been deleted.",
       );
     }
 

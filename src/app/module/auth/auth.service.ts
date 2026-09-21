@@ -6,9 +6,9 @@ import httpStatus from "http-status";
 import type { JwtPayload, SignOptions } from "jsonwebtoken";
 import path from "path";
 import {
-  AuthProvider,
-  Role,
-  UserStatus,
+	AuthProvider,
+	Role,
+	UserStatus,
 } from "../../../generated/prisma/enums";
 import config from "../../config";
 import { googleClient } from "../../lib/googleAuth";
@@ -18,610 +18,610 @@ import { redisClient } from "../../lib/redis";
 import { AppError } from "../../utils/AppError";
 import { jwtUtils } from "../../utils/jwt";
 import type {
-  IEmailVerificationPayload,
-  IForgotPasswordPayload,
-  IGoogleLoginPayload,
-  ILoginPayload,
-  IRegisterCustomerPayload,
-  IRequestUser,
-  IResetPasswordPayload,
+	IEmailVerificationPayload,
+	IForgotPasswordPayload,
+	IGoogleLoginPayload,
+	ILoginPayload,
+	IRegisterCustomerPayload,
+	IRequestUser,
+	IResetPasswordPayload,
 } from "./auth.interface";
 
 //* Register
 const RegisterIntoDB = async (payload: IRegisterCustomerPayload) => {
-  const { name, password } = payload;
-  const email = payload.email.trim().toLowerCase();
+	const { name, password } = payload;
+	const email = payload.email.trim().toLowerCase();
 
-  const isUserExist = await prisma.user.findUnique({
-    where: { email },
-  });
+	const isUserExist = await prisma.user.findUnique({
+		where: { email },
+	});
 
-  if (isUserExist) {
-    throw new AppError(
-      httpStatus.CONFLICT,
-      "User with this email is already exists!",
-    );
-  }
+	if (isUserExist) {
+		throw new AppError(
+			httpStatus.CONFLICT,
+			"User with this email is already exists!",
+		);
+	}
 
-  const hashedPassword = await bcrypt.hash(
-    password,
-    Number(config.bcrypt_salt_rounds),
-  );
+	const hashedPassword = await bcrypt.hash(
+		password,
+		Number(config.bcrypt_salt_rounds),
+	);
 
-  // Store in Redis
-  const expirationSeconds = 5 * 60;
+	// Store in Redis
+	const expirationSeconds = 5 * 60;
 
-  const verificationKey = `parcelix-email-verification-otp:${email}`;
-  const otp = crypto.randomInt(100000, 1000000).toString();
+	const verificationKey = `parcelix-email-verification-otp:${email}`;
+	const otp = crypto.randomInt(100000, 1000000).toString();
 
-  await redisClient.set(verificationKey, otp, {
-    expiration: { type: "EX", value: expirationSeconds },
-  });
+	await redisClient.set(verificationKey, otp, {
+		expiration: { type: "EX", value: expirationSeconds },
+	});
 
-  const userInfoKey = `parcelix-user-info:${email}`;
-  const userInfo = {
-    name,
-    email,
-    password: hashedPassword,
-    phone: payload?.phone ?? null,
-    address: payload?.address ?? null,
-  };
+	const userInfoKey = `parcelix-user-info:${email}`;
+	const userInfo = {
+		name,
+		email,
+		password: hashedPassword,
+		phone: payload?.phone ?? null,
+		address: payload?.address ?? null,
+	};
 
-  await redisClient.set(userInfoKey, JSON.stringify(userInfo), {
-    expiration: {
-      type: "EX",
-      value: expirationSeconds,
-    },
-  });
+	await redisClient.set(userInfoKey, JSON.stringify(userInfo), {
+		expiration: {
+			type: "EX",
+			value: expirationSeconds,
+		},
+	});
 
-  // Send OTP Email
-  const templatePath = path.join(
-    process.cwd(),
-    "src/app/templates/email-verification.ejs",
-  );
+	// Send OTP Email
+	const templatePath = path.join(
+		process.cwd(),
+		"src/app/templates/email-verification.ejs",
+	);
 
-  const html = await ejs.renderFile(templatePath, {
-    name,
-    otp,
-    expirationMinutes: expirationSeconds / 60,
-  });
+	const html = await ejs.renderFile(templatePath, {
+		name,
+		otp,
+		expirationMinutes: expirationSeconds / 60,
+	});
 
-  await transporter.sendMail({
-    from: config.email_sender,
-    subject: "Email verification OTP",
-    to: email,
-    html,
-  });
+	await transporter.sendMail({
+		from: config.email_sender,
+		subject: "Email verification OTP",
+		to: email,
+		html,
+	});
 };
 
 //* Email Verification
 const emailVerification = async (payload: IEmailVerificationPayload) => {
-  const { email, otp } = payload;
+	const { email, otp } = payload;
 
-  const isUserExist = await prisma.user.findUnique({
-    where: { email },
-  });
+	const isUserExist = await prisma.user.findUnique({
+		where: { email },
+	});
 
-  if (isUserExist?.emailVerified) {
-    throw new AppError(httpStatus.BAD_REQUEST, "Email is already verified.");
-  }
+	if (isUserExist?.emailVerified) {
+		throw new AppError(httpStatus.BAD_REQUEST, "Email is already verified.");
+	}
 
-  if (isUserExist?.status === UserStatus.BLOCKED) {
-    throw new AppError(httpStatus.FORBIDDEN, "User is blocked.");
-  }
+	if (isUserExist?.status === UserStatus.BLOCKED) {
+		throw new AppError(httpStatus.FORBIDDEN, "User is blocked.");
+	}
 
-  if (isUserExist?.isDeleted) {
-    throw new AppError(httpStatus.NOT_FOUND, "User is deleted.");
-  }
+	if (isUserExist?.isDeleted) {
+		throw new AppError(httpStatus.NOT_FOUND, "User is deleted.");
+	}
 
-  // Get Redis Data and verify
-  const verificationKey = `parcelix-email-verification-otp:${email}`;
-  const redisVerificationOtp = await redisClient.get(verificationKey);
+	// Get Redis Data and verify
+	const verificationKey = `parcelix-email-verification-otp:${email}`;
+	const redisVerificationOtp = await redisClient.get(verificationKey);
 
-  if (!redisVerificationOtp) {
-    throw new AppError(httpStatus.BAD_REQUEST, "Invalid OTP.");
-  }
+	if (!redisVerificationOtp) {
+		throw new AppError(httpStatus.BAD_REQUEST, "Invalid OTP.");
+	}
 
-  if (redisVerificationOtp !== otp) {
-    throw new AppError(httpStatus.BAD_REQUEST, "OTP did not matched.");
-  }
+	if (redisVerificationOtp !== otp) {
+		throw new AppError(httpStatus.BAD_REQUEST, "OTP did not matched.");
+	}
 
-  const userInfoKey = `parcelix-user-info:${email}`;
-  const userInfo = await redisClient.get(userInfoKey);
+	const userInfoKey = `parcelix-user-info:${email}`;
+	const userInfo = await redisClient.get(userInfoKey);
 
-  if (!userInfo) {
-    throw new AppError(httpStatus.NOT_FOUND, "User data is not found!");
-  }
+	if (!userInfo) {
+		throw new AppError(httpStatus.NOT_FOUND, "User data is not found!");
+	}
 
-  const userData: IRegisterCustomerPayload = JSON.parse(userInfo);
+	const userData: IRegisterCustomerPayload = JSON.parse(userInfo);
 
-  // Create user into Database
-  const createdUser = await prisma.user.create({
-    data: {
-      name: userData.name,
-      email: userData.email,
-      password: userData.password,
-      phone: userData?.phone,
-      emailVerified: true,
-      role: Role.CUSTOMER,
-      customer: {
-        create: {
-          address: userData?.address,
-        },
-      },
-    },
-    omit: { password: true },
-    include: { customer: true },
-  });
+	// Create user into Database
+	const createdUser = await prisma.user.create({
+		data: {
+			name: userData.name,
+			email: userData.email,
+			password: userData.password,
+			phone: userData?.phone,
+			emailVerified: true,
+			role: Role.CUSTOMER,
+			customer: {
+				create: {
+					address: userData?.address,
+				},
+			},
+		},
+		omit: { password: true },
+		include: { customer: true },
+	});
 
-  // Clear Redis data
-  await redisClient.del([verificationKey, userInfoKey]);
+	// Clear Redis data
+	await redisClient.del([verificationKey, userInfoKey]);
 
-  // Send welcome email
-  const templatePath = path.join(
-    process.cwd(),
-    "src/app/templates/welcome-email.ejs",
-  );
+	// Send welcome email
+	const templatePath = path.join(
+		process.cwd(),
+		"src/app/templates/welcome-email.ejs",
+	);
 
-  const html = await ejs.renderFile(templatePath, {
-    name: createdUser.name,
-    url: config.backend_url,
-  });
+	const html = await ejs.renderFile(templatePath, {
+		name: createdUser.name,
+		url: config.backend_url,
+	});
 
-  await transporter.sendMail({
-    from: config.email_sender,
-    subject: "Welcome to Parcelix",
-    to: createdUser.email,
-    html,
-  });
+	await transporter.sendMail({
+		from: config.email_sender,
+		subject: "Welcome to Parcelix",
+		to: createdUser.email,
+		html,
+	});
 
-  const { customer, ...user } = createdUser;
+	const { customer, ...user } = createdUser;
 
-  return {
-    user,
-    customer,
-  };
+	return {
+		user,
+		customer,
+	};
 };
 
 //* Login
 const login = async (payload: ILoginPayload) => {
-  const { password } = payload;
-  const email = payload.email.trim().toLowerCase();
+	const { password } = payload;
+	const email = payload.email.trim().toLowerCase();
 
-  const user = await prisma.user.findUnique({
-    where: { email },
-  });
+	const user = await prisma.user.findUnique({
+		where: { email },
+	});
 
-  if (!user) {
-    throw new AppError(httpStatus.NOT_FOUND, "User not found");
-  }
+	if (!user) {
+		throw new AppError(httpStatus.NOT_FOUND, "User not found");
+	}
 
-  if (user.status === UserStatus.BLOCKED) {
-    throw new AppError(httpStatus.FORBIDDEN, "User is blocked");
-  }
+	if (user.status === UserStatus.BLOCKED) {
+		throw new AppError(httpStatus.FORBIDDEN, "User is blocked");
+	}
 
-  if (user.isDeleted || user.status === UserStatus.DELETED) {
-    throw new AppError(httpStatus.NOT_FOUND, "User is deleted");
-  }
+	if (user.isDeleted || user.status === UserStatus.DELETED) {
+		throw new AppError(httpStatus.NOT_FOUND, "User is deleted");
+	}
 
-  if (user?.password === null && user?.googleId !== null) {
-    throw new AppError(
-      httpStatus.BAD_REQUEST,
-      "This user is registered with Google.",
-    );
-  }
+	if (user?.password === null && user?.googleId !== null) {
+		throw new AppError(
+			httpStatus.BAD_REQUEST,
+			"This user is registered with Google.",
+		);
+	}
 
-  if (user?.password === null && user?.googleId === null) {
-    throw new AppError(
-      httpStatus.BAD_REQUEST,
-      "This user is not approved yet.",
-    );
-  }
+	if (user?.password === null && user?.googleId === null) {
+		throw new AppError(
+			httpStatus.BAD_REQUEST,
+			"This user is not approved yet.",
+		);
+	}
 
-  const isPasswordMatched = await bcrypt.compare(
-    password,
-    user.password as string,
-  );
+	const isPasswordMatched = await bcrypt.compare(
+		password,
+		user.password as string,
+	);
 
-  if (!isPasswordMatched) {
-    throw new AppError(httpStatus.UNAUTHORIZED, "Invalid credentials");
-  }
+	if (!isPasswordMatched) {
+		throw new AppError(httpStatus.UNAUTHORIZED, "Invalid credentials");
+	}
 
-  const jwtPayload = {
-    userId: user.id,
-    name: user.name,
-    email: user.email,
-    role: user.role,
-  };
+	const jwtPayload = {
+		userId: user.id,
+		name: user.name,
+		email: user.email,
+		role: user.role,
+	};
 
-  const accessToken = jwtUtils.createToken(
-    jwtPayload,
-    config.jwt_access_secret,
-    config.jwt_access_expires_in as SignOptions,
-  );
+	const accessToken = jwtUtils.createToken(
+		jwtPayload,
+		config.jwt_access_secret,
+		config.jwt_access_expires_in as SignOptions,
+	);
 
-  const refreshToken = jwtUtils.createToken(
-    jwtPayload,
-    config.jwt_refresh_secret,
-    config.jwt_refresh_expires_in as SignOptions,
-  );
+	const refreshToken = jwtUtils.createToken(
+		jwtPayload,
+		config.jwt_refresh_secret,
+		config.jwt_refresh_expires_in as SignOptions,
+	);
 
-  return {
-    accessToken,
-    refreshToken,
-  };
+	return {
+		accessToken,
+		refreshToken,
+	};
 };
 
 //* Get Profile
 const getProfile = async (user: IRequestUser) => {
-  const isUserExists = await prisma.user.findUnique({
-    where: { id: user.userId },
-    include: {
-      customer: true,
-      courier: true,
-    },
-    omit: { password: true },
-  });
+	const isUserExists = await prisma.user.findUnique({
+		where: { id: user.userId },
+		include: {
+			customer: true,
+			courier: true,
+		},
+		omit: { password: true },
+	});
 
-  if (!isUserExists) {
-    throw new AppError(httpStatus.NOT_FOUND, "User not found!");
-  }
+	if (!isUserExists) {
+		throw new AppError(httpStatus.NOT_FOUND, "User not found!");
+	}
 
-  return isUserExists;
+	return isUserExists;
 };
 
 //* Refresh Token
 const refreshToken = async (token: string) => {
-  const verifiedRefreshToken = jwtUtils.verifyToken(
-    token,
-    config.jwt_refresh_secret,
-  );
+	const verifiedRefreshToken = jwtUtils.verifyToken(
+		token,
+		config.jwt_refresh_secret,
+	);
 
-  if (!verifiedRefreshToken.success || !verifiedRefreshToken.data) {
-    throw new AppError(
-      httpStatus.UNAUTHORIZED,
-      config.node_env === "development"
-        ? verifiedRefreshToken.error
-        : "Invalid refresh Token",
-    );
-  }
+	if (!verifiedRefreshToken.success || !verifiedRefreshToken.data) {
+		throw new AppError(
+			httpStatus.UNAUTHORIZED,
+			config.node_env === "development"
+				? verifiedRefreshToken.error
+				: "Invalid refresh Token",
+		);
+	}
 
-  const data = verifiedRefreshToken.data as JwtPayload;
+	const data = verifiedRefreshToken.data as JwtPayload;
 
-  const user = await prisma.user.findUnique({
-    where: { id: data.userId },
-  });
+	const user = await prisma.user.findUnique({
+		where: { id: data.userId },
+	});
 
-  if (!user || user.isDeleted || user.status !== UserStatus.ACTIVE) {
-    throw new AppError(
-      httpStatus.UNAUTHORIZED,
-      "User is inactive or not found",
-    );
-  }
+	if (!user || user.isDeleted || user.status !== UserStatus.ACTIVE) {
+		throw new AppError(
+			httpStatus.UNAUTHORIZED,
+			"User is inactive or not found",
+		);
+	}
 
-  const jwtPayload = {
-    userId: user.id,
-    name: user.name,
-    email: user.email,
-    role: user.role,
-  };
+	const jwtPayload = {
+		userId: user.id,
+		name: user.name,
+		email: user.email,
+		role: user.role,
+	};
 
-  const newAccessToken = jwtUtils.createToken(
-    jwtPayload,
-    config.jwt_access_secret,
-    config.jwt_access_expires_in as SignOptions,
-  );
+	const newAccessToken = jwtUtils.createToken(
+		jwtPayload,
+		config.jwt_access_secret,
+		config.jwt_access_expires_in as SignOptions,
+	);
 
-  const newRefreshToken = jwtUtils.createToken(
-    jwtPayload,
-    config.jwt_refresh_secret,
-    config.jwt_refresh_expires_in as SignOptions,
-  );
+	const newRefreshToken = jwtUtils.createToken(
+		jwtPayload,
+		config.jwt_refresh_secret,
+		config.jwt_refresh_expires_in as SignOptions,
+	);
 
-  return {
-    newAccessToken,
-    newRefreshToken,
-  };
+	return {
+		newAccessToken,
+		newRefreshToken,
+	};
 };
 
 //* Forgot Password
 const forgotPassword = async (payload: IForgotPasswordPayload) => {
-  const { email } = payload;
+	const { email } = payload;
 
-  const user = await prisma.user.findUnique({
-    where: { email },
-  });
+	const user = await prisma.user.findUnique({
+		where: { email },
+	});
 
-  if (!user) {
-    throw new AppError(httpStatus.NOT_FOUND, "User not found!");
-  }
+	if (!user) {
+		throw new AppError(httpStatus.NOT_FOUND, "User not found!");
+	}
 
-  if (user.status === UserStatus.BLOCKED) {
-    throw new AppError(
-      httpStatus.FORBIDDEN,
-      "Your account is blocked. Please, contact support.",
-    );
-  }
+	if (user.status === UserStatus.BLOCKED) {
+		throw new AppError(
+			httpStatus.FORBIDDEN,
+			"Your account is blocked. Please, contact support.",
+		);
+	}
 
-  if (user.isDeleted || user.status === UserStatus.DELETED) {
-    throw new AppError(httpStatus.NOT_FOUND, "User is deleted.");
-  }
+	if (user.isDeleted || user.status === UserStatus.DELETED) {
+		throw new AppError(httpStatus.NOT_FOUND, "User is deleted.");
+	}
 
-  if (!user.emailVerified) {
-    throw new AppError(httpStatus.UNAUTHORIZED, "User email is not verified!");
-  }
+	if (!user.emailVerified) {
+		throw new AppError(httpStatus.UNAUTHORIZED, "User email is not verified!");
+	}
 
-  if (user.googleId && user.authProvider === "GOOGLE") {
-    throw new AppError(httpStatus.BAD_REQUEST, "You have account with Google.");
-  }
+	if (user.googleId && user.authProvider === "GOOGLE") {
+		throw new AppError(httpStatus.BAD_REQUEST, "You have account with Google.");
+	}
 
-  const otp = crypto.randomInt(100000, 1000000).toString();
+	const otp = crypto.randomInt(100000, 1000000).toString();
 
-  const key = `parcelix-forgot-password-otp:${user.email}`;
+	const key = `parcelix-forgot-password-otp:${user.email}`;
 
-  const expirationSeconds = 5 * 60;
+	const expirationSeconds = 5 * 60;
 
-  await redisClient.set(key, otp, {
-    expiration: {
-      type: "EX",
-      value: expirationSeconds,
-    },
-  });
+	await redisClient.set(key, otp, {
+		expiration: {
+			type: "EX",
+			value: expirationSeconds,
+		},
+	});
 
-  const templatePath = path.join(
-    process.cwd(),
-    "src/app/templates/forgot-password-email.ejs",
-  );
+	const templatePath = path.join(
+		process.cwd(),
+		"src/app/templates/forgot-password-email.ejs",
+	);
 
-  const html = await ejs.renderFile(templatePath, {
-    name: user.name,
-    otp,
-    expirationMinutes: expirationSeconds / 60,
-  });
+	const html = await ejs.renderFile(templatePath, {
+		name: user.name,
+		otp,
+		expirationMinutes: expirationSeconds / 60,
+	});
 
-  await transporter.sendMail({
-    from: config.email_sender,
-    subject: "Reset Password OTP",
-    to: user.email,
-    html,
-  });
+	await transporter.sendMail({
+		from: config.email_sender,
+		subject: "Reset Password OTP",
+		to: user.email,
+		html,
+	});
 };
 
 //* Reset Password
 const resetPassword = async (payload: IResetPasswordPayload) => {
-  const { email, otp, newPassword } = payload;
+	const { email, otp, newPassword } = payload;
 
-  const user = await prisma.user.findUnique({
-    where: { email },
-  });
+	const user = await prisma.user.findUnique({
+		where: { email },
+	});
 
-  if (!user) {
-    throw new AppError(httpStatus.NOT_FOUND, "User not found!");
-  }
+	if (!user) {
+		throw new AppError(httpStatus.NOT_FOUND, "User not found!");
+	}
 
-  if (user.status === UserStatus.BLOCKED) {
-    throw new AppError(
-      httpStatus.FORBIDDEN,
-      "Your account is blocked. Please, contact support.",
-    );
-  }
+	if (user.status === UserStatus.BLOCKED) {
+		throw new AppError(
+			httpStatus.FORBIDDEN,
+			"Your account is blocked. Please, contact support.",
+		);
+	}
 
-  if (user.isDeleted || user.status === UserStatus.DELETED) {
-    throw new AppError(httpStatus.NOT_FOUND, "User is deleted.");
-  }
+	if (user.isDeleted || user.status === UserStatus.DELETED) {
+		throw new AppError(httpStatus.NOT_FOUND, "User is deleted.");
+	}
 
-  if (!user.emailVerified) {
-    throw new AppError(httpStatus.UNAUTHORIZED, "User email is not verified!");
-  }
+	if (!user.emailVerified) {
+		throw new AppError(httpStatus.UNAUTHORIZED, "User email is not verified!");
+	}
 
-  if (user.googleId && user.authProvider === "GOOGLE") {
-    throw new AppError(httpStatus.BAD_REQUEST, "You have account with Google.");
-  }
+	if (user.googleId && user.authProvider === "GOOGLE") {
+		throw new AppError(httpStatus.BAD_REQUEST, "You have account with Google.");
+	}
 
-  const key = `parcelix-forgot-password-otp:${user.email}`;
+	const key = `parcelix-forgot-password-otp:${user.email}`;
 
-  const redisOtp = await redisClient.get(key);
+	const redisOtp = await redisClient.get(key);
 
-  if (!redisOtp) {
-    throw new AppError(httpStatus.BAD_REQUEST, "OTP does not exist.");
-  }
+	if (!redisOtp) {
+		throw new AppError(httpStatus.BAD_REQUEST, "OTP does not exist.");
+	}
 
-  if (redisOtp !== otp) {
-    throw new AppError(httpStatus.BAD_REQUEST, "Invalid OTP");
-  }
+	if (redisOtp !== otp) {
+		throw new AppError(httpStatus.BAD_REQUEST, "Invalid OTP");
+	}
 
-  const hashedPassword = await bcrypt.hash(
-    newPassword,
-    Number(config.bcrypt_salt_rounds),
-  );
+	const hashedPassword = await bcrypt.hash(
+		newPassword,
+		Number(config.bcrypt_salt_rounds),
+	);
 
-  await prisma.user.update({
-    where: { email: user.email },
-    data: {
-      password: hashedPassword,
-    },
-  });
+	await prisma.user.update({
+		where: { email: user.email },
+		data: {
+			password: hashedPassword,
+		},
+	});
 
-  const templatePath = path.join(
-    process.cwd(),
-    "/src/app/templates/reset-password.ejs",
-  );
+	const templatePath = path.join(
+		process.cwd(),
+		"/src/app/templates/reset-password.ejs",
+	);
 
-  const html = await ejs.renderFile(templatePath, {
-    name: user.name,
-    loginUrl: config.backend_url,
-  });
+	const html = await ejs.renderFile(templatePath, {
+		name: user.name,
+		loginUrl: config.backend_url,
+	});
 
-  await transporter.sendMail({
-    from: config.email_sender,
-    subject: "Password Reset Successful - Parcelix",
-    to: user.email,
-    html,
-  });
+	await transporter.sendMail({
+		from: config.email_sender,
+		subject: "Password Reset Successful - Parcelix",
+		to: user.email,
+		html,
+	});
 };
 
 //* Google Login
 const googleLogin = async (payload: IGoogleLoginPayload) => {
-  let googleIdTokenPayload: TokenPayload | null | undefined = null;
-  try {
-    const ticket = await googleClient.verifyIdToken({
-      idToken: payload.idToken,
-      audience: config.google_client_id,
-    });
+	let googleIdTokenPayload: TokenPayload | null | undefined = null;
+	try {
+		const ticket = await googleClient.verifyIdToken({
+			idToken: payload.idToken,
+			audience: config.google_client_id,
+		});
 
-    googleIdTokenPayload = ticket.getPayload();
-  } catch (error) {
-    console.log("Google ID Token Verification Failed", error);
-    throw new AppError(
-      httpStatus.UNAUTHORIZED,
-      "Invalid Or Expired Google Id Token",
-    );
-  }
+		googleIdTokenPayload = ticket.getPayload();
+	} catch (error) {
+		console.log("Google ID Token Verification Failed", error);
+		throw new AppError(
+			httpStatus.UNAUTHORIZED,
+			"Invalid Or Expired Google Id Token",
+		);
+	}
 
-  if (!googleIdTokenPayload) {
-    throw new AppError(
-      httpStatus.UNAUTHORIZED,
-      "Invalid Or Expired Google Id Token",
-    );
-  }
+	if (!googleIdTokenPayload) {
+		throw new AppError(
+			httpStatus.UNAUTHORIZED,
+			"Invalid Or Expired Google Id Token",
+		);
+	}
 
-  if (!googleIdTokenPayload.email) {
-    throw new AppError(httpStatus.BAD_REQUEST, "Google Email Not Found");
-  }
-  if (!googleIdTokenPayload.name) {
-    throw new AppError(
-      httpStatus.BAD_REQUEST,
-      "Google Email User Name Not Found",
-    );
-  }
+	if (!googleIdTokenPayload.email) {
+		throw new AppError(httpStatus.BAD_REQUEST, "Google Email Not Found");
+	}
+	if (!googleIdTokenPayload.name) {
+		throw new AppError(
+			httpStatus.BAD_REQUEST,
+			"Google Email User Name Not Found",
+		);
+	}
 
-  const ifCustomerExistWithGoogleAuth = await prisma.user.findUnique({
-    where: {
-      email: googleIdTokenPayload.email,
-      role: Role.CUSTOMER,
-      googleId: googleIdTokenPayload.sub,
-    },
-  });
+	const ifCustomerExistWithGoogleAuth = await prisma.user.findUnique({
+		where: {
+			email: googleIdTokenPayload.email,
+			role: Role.CUSTOMER,
+			googleId: googleIdTokenPayload.sub,
+		},
+	});
 
-  let user = ifCustomerExistWithGoogleAuth;
+	let user = ifCustomerExistWithGoogleAuth;
 
-  if (!ifCustomerExistWithGoogleAuth) {
-    const ifCustomerExistWithCredentials = await prisma.user.findUnique({
-      where: {
-        email: googleIdTokenPayload.email,
-        role: Role.CUSTOMER,
-        authProvider: AuthProvider.CREDENTIALS,
-      },
-    });
+	if (!ifCustomerExistWithGoogleAuth) {
+		const ifCustomerExistWithCredentials = await prisma.user.findUnique({
+			where: {
+				email: googleIdTokenPayload.email,
+				role: Role.CUSTOMER,
+				authProvider: AuthProvider.CREDENTIALS,
+			},
+		});
 
-    if (ifCustomerExistWithCredentials) {
-      if (!ifCustomerExistWithCredentials.emailVerified) {
-        throw new AppError(httpStatus.FORBIDDEN, "Email Not Verified");
-      }
+		if (ifCustomerExistWithCredentials) {
+			if (!ifCustomerExistWithCredentials.emailVerified) {
+				throw new AppError(httpStatus.FORBIDDEN, "Email Not Verified");
+			}
 
-      if (ifCustomerExistWithCredentials.status === UserStatus.BLOCKED) {
-        throw new AppError(httpStatus.FORBIDDEN, "User Is Blocked");
-      }
+			if (ifCustomerExistWithCredentials.status === UserStatus.BLOCKED) {
+				throw new AppError(httpStatus.FORBIDDEN, "User Is Blocked");
+			}
 
-      if (
-        ifCustomerExistWithCredentials.isDeleted ||
-        ifCustomerExistWithCredentials.status === UserStatus.DELETED
-      ) {
-        throw new AppError(httpStatus.FORBIDDEN, "User Is Deleted");
-      }
+			if (
+				ifCustomerExistWithCredentials.isDeleted ||
+				ifCustomerExistWithCredentials.status === UserStatus.DELETED
+			) {
+				throw new AppError(httpStatus.FORBIDDEN, "User Is Deleted");
+			}
 
-      user = await prisma.user.update({
-        where: {
-          id: ifCustomerExistWithCredentials.id,
-        },
+			user = await prisma.user.update({
+				where: {
+					id: ifCustomerExistWithCredentials.id,
+				},
 
-        data: {
-          googleId: googleIdTokenPayload.sub,
-        },
-      });
-    } else {
-      // Google Register
-      user = await prisma.user.create({
-        data: {
-          name: googleIdTokenPayload.name,
-          email: googleIdTokenPayload.email,
-          role: Role.CUSTOMER,
-          googleId: googleIdTokenPayload.sub,
-          authProvider: AuthProvider.GOOGLE,
-          emailVerified: true,
-          customer: {
-            create: {
-              address: null,
-            },
-          },
-        },
-      });
-      const tempatePath = path.join(
-        process.cwd(),
-        "src/app/templates/welcome-email.ejs",
-      );
+				data: {
+					googleId: googleIdTokenPayload.sub,
+				},
+			});
+		} else {
+			// Google Register
+			user = await prisma.user.create({
+				data: {
+					name: googleIdTokenPayload.name,
+					email: googleIdTokenPayload.email,
+					role: Role.CUSTOMER,
+					googleId: googleIdTokenPayload.sub,
+					authProvider: AuthProvider.GOOGLE,
+					emailVerified: true,
+					customer: {
+						create: {
+							address: null,
+						},
+					},
+				},
+			});
+			const tempatePath = path.join(
+				process.cwd(),
+				"src/app/templates/welcome-email.ejs",
+			);
 
-      const html = await ejs.renderFile(tempatePath, {
-        name: user.name,
-        url: config.backend_url,
-      });
+			const html = await ejs.renderFile(tempatePath, {
+				name: user.name,
+				url: config.backend_url,
+			});
 
-      await transporter.sendMail({
-        from: config.email_sender,
-        to: user.email,
-        subject: "Welcome To Parcelix",
-        html,
-      });
-    }
-  }
+			await transporter.sendMail({
+				from: config.email_sender,
+				to: user.email,
+				subject: "Welcome To Parcelix",
+				html,
+			});
+		}
+	}
 
-  if (!user) {
-    throw new AppError(httpStatus.NOT_FOUND, "User Not Found");
-  }
+	if (!user) {
+		throw new AppError(httpStatus.NOT_FOUND, "User Not Found");
+	}
 
-  if (user.status === UserStatus.BLOCKED) {
-    throw new AppError(
-      httpStatus.FORBIDDEN,
-      "User Is Blocked. Contact support.",
-    );
-  }
+	if (user.status === UserStatus.BLOCKED) {
+		throw new AppError(
+			httpStatus.FORBIDDEN,
+			"User Is Blocked. Contact support.",
+		);
+	}
 
-  if (user.isDeleted || user.status === UserStatus.DELETED) {
-    throw new AppError(httpStatus.FORBIDDEN, "User Is Deleted");
-  }
+	if (user.isDeleted || user.status === UserStatus.DELETED) {
+		throw new AppError(httpStatus.FORBIDDEN, "User Is Deleted");
+	}
 
-  const jwtPayload = {
-    userId: user.id,
-    name: user.name,
-    email: user.email,
-    role: user.role,
-  };
+	const jwtPayload = {
+		userId: user.id,
+		name: user.name,
+		email: user.email,
+		role: user.role,
+	};
 
-  const accessToken = jwtUtils.createToken(
-    jwtPayload,
-    config.jwt_access_secret,
-    config.jwt_access_expires_in as SignOptions,
-  );
+	const accessToken = jwtUtils.createToken(
+		jwtPayload,
+		config.jwt_access_secret,
+		config.jwt_access_expires_in as SignOptions,
+	);
 
-  const refreshToken = jwtUtils.createToken(
-    jwtPayload,
-    config.jwt_refresh_secret,
-    config.jwt_refresh_expires_in as SignOptions,
-  );
+	const refreshToken = jwtUtils.createToken(
+		jwtPayload,
+		config.jwt_refresh_secret,
+		config.jwt_refresh_expires_in as SignOptions,
+	);
 
-  return {
-    accessToken,
-    refreshToken,
-  };
+	return {
+		accessToken,
+		refreshToken,
+	};
 };
 
 export const AuthServices = {
-  RegisterIntoDB,
-  emailVerification,
-  login,
-  getProfile,
-  refreshToken,
-  forgotPassword,
-  resetPassword,
-  googleLogin,
+	RegisterIntoDB,
+	emailVerification,
+	login,
+	getProfile,
+	refreshToken,
+	forgotPassword,
+	resetPassword,
+	googleLogin,
 };

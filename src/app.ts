@@ -11,6 +11,7 @@ import { globalErrorHandler } from "./app/middleware/globalErrorHandler";
 import { notFound } from "./app/middleware/notFound";
 import { AuthRoutes } from "./app/module/auth/auth.route";
 import { CourierRoutes } from "./app/module/courier/courier.route";
+import { ShipmentRoutes } from "./app/module/shipment/shipment.route";
 import { UserRoutes } from "./app/module/user/user.route";
 
 const app: Application = express();
@@ -32,6 +33,7 @@ app.use(cookieParser());
 app.use("/api/v1/auth", AuthRoutes);
 app.use("/api/v1/couriers", CourierRoutes);
 app.use("/api/v1/users", UserRoutes);
+app.use("/api/v1/shipments", ShipmentRoutes);
 
 // Basic route
 app.get("/", async (req: Request, res: Response) => {

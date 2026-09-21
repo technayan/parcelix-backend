@@ -1,5 +1,5 @@
 export interface IUpdateUserPayload {
-  name?: string;
-  phone?: string;
-  address?: string;
+	name?: string;
+	phone?: string;
+	address?: string;
 }

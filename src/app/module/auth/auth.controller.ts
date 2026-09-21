@@ -8,191 +8,191 @@ import { AuthServices } from "./auth.service";
 
 //* Register
 const registerCustomer = catchAsync(async (req: Request, res: Response) => {
-  const payload = req.body;
+	const payload = req.body;
 
-  await AuthServices.RegisterIntoDB(payload);
+	await AuthServices.RegisterIntoDB(payload);
 
-  sendResponse(res, {
-    success: true,
-    statusCode: httpStatus.OK,
-    message:
-      "The verification OTP has been sent to your email. Please, verify the email to register.",
-    data: null,
-  });
+	sendResponse(res, {
+		success: true,
+		statusCode: httpStatus.OK,
+		message:
+			"The verification OTP has been sent to your email. Please, verify the email to register.",
+		data: null,
+	});
 });
 
 //* Email Verification
 const verifyEmail = catchAsync(async (req: Request, res: Response) => {
-  const payload = req.body;
+	const payload = req.body;
 
-  const result = await AuthServices.emailVerification(payload);
+	const result = await AuthServices.emailVerification(payload);
 
-  const { user, customer } = result;
+	const { user, customer } = result;
 
-  sendResponse(res, {
-    statusCode: httpStatus.CREATED,
-    success: true,
-    message: "User registered and email verified successfully.",
-    data: {
-      user,
-      customer,
-    },
-  });
+	sendResponse(res, {
+		statusCode: httpStatus.CREATED,
+		success: true,
+		message: "User registered and email verified successfully.",
+		data: {
+			user,
+			customer,
+		},
+	});
 });
 
 //* Login
 const login = catchAsync(async (req: Request, res: Response) => {
-  const payload = req.body;
+	const payload = req.body;
 
-  const result = await AuthServices.login(payload);
+	const result = await AuthServices.login(payload);
 
-  const { accessToken, refreshToken } = result;
+	const { accessToken, refreshToken } = result;
 
-  res.cookie("accessToken", accessToken, {
-    httpOnly: true,
-    secure: false,
-    sameSite: "none",
-    maxAge: 1000 * 60 * 60 * 24, // 24 hour or 1 day
-  });
-  res.cookie("refreshToken", refreshToken, {
-    httpOnly: true,
-    secure: false,
-    sameSite: "none",
-    maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
-  });
+	res.cookie("accessToken", accessToken, {
+		httpOnly: true,
+		secure: false,
+		sameSite: "none",
+		maxAge: 1000 * 60 * 60 * 24, // 24 hour or 1 day
+	});
+	res.cookie("refreshToken", refreshToken, {
+		httpOnly: true,
+		secure: false,
+		sameSite: "none",
+		maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
+	});
 
-  sendResponse(res, {
-    statusCode: httpStatus.OK,
-    success: true,
-    message: "User logged in successfully",
-    data: {
-      accessToken,
-      refreshToken,
-    },
-  });
+	sendResponse(res, {
+		statusCode: httpStatus.OK,
+		success: true,
+		message: "User logged in successfully",
+		data: {
+			accessToken,
+			refreshToken,
+		},
+	});
 });
 
 //* Get Profile
 const getProfile = catchAsync(async (req: Request, res: Response) => {
-  const user = req.user as unknown as IRequestUser;
+	const user = req.user as unknown as IRequestUser;
 
-  if (!user) {
-    throw new AppError(
-      httpStatus.UNAUTHORIZED,
-      "User information is missing in the request.",
-    );
-  }
+	if (!user) {
+		throw new AppError(
+			httpStatus.UNAUTHORIZED,
+			"User information is missing in the request.",
+		);
+	}
 
-  const result = await AuthServices.getProfile(user);
+	const result = await AuthServices.getProfile(user);
 
-  sendResponse(res, {
-    statusCode: httpStatus.OK,
-    success: true,
-    message: "User profile fetched successfully.",
-    data: result,
-  });
+	sendResponse(res, {
+		statusCode: httpStatus.OK,
+		success: true,
+		message: "User profile fetched successfully.",
+		data: result,
+	});
 });
 
 //* Refresh Token
 const refreshToken = catchAsync(async (req: Request, res: Response) => {
-  if (!req.cookies.refreshToken) {
-    throw new AppError(httpStatus.UNAUTHORIZED, "Refresh token is missing");
-  }
-  const result = await AuthServices.refreshToken(req.cookies.refreshToken);
-  const { newAccessToken, newRefreshToken } = result;
+	if (!req.cookies.refreshToken) {
+		throw new AppError(httpStatus.UNAUTHORIZED, "Refresh token is missing");
+	}
+	const result = await AuthServices.refreshToken(req.cookies.refreshToken);
+	const { newAccessToken, newRefreshToken } = result;
 
-  res.cookie("accessToken", newAccessToken, {
-    httpOnly: true,
-    secure: false,
-    sameSite: "none",
-    maxAge: 1000 * 60 * 60 * 24, // 24 hour or 1 day
-  });
-  res.cookie("refreshToken", newRefreshToken, {
-    httpOnly: true,
-    secure: false,
-    sameSite: "none",
-    maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
-  });
+	res.cookie("accessToken", newAccessToken, {
+		httpOnly: true,
+		secure: false,
+		sameSite: "none",
+		maxAge: 1000 * 60 * 60 * 24, // 24 hour or 1 day
+	});
+	res.cookie("refreshToken", newRefreshToken, {
+		httpOnly: true,
+		secure: false,
+		sameSite: "none",
+		maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
+	});
 
-  sendResponse(res, {
-    statusCode: httpStatus.OK,
-    success: true,
-    message: "New tokens generated successfully",
-    data: {
-      accessToken: newAccessToken,
-      refreshToken: newRefreshToken,
-    },
-  });
+	sendResponse(res, {
+		statusCode: httpStatus.OK,
+		success: true,
+		message: "New tokens generated successfully",
+		data: {
+			accessToken: newAccessToken,
+			refreshToken: newRefreshToken,
+		},
+	});
 });
 
 //* Forgot Password
 const forgotPassword = catchAsync(async (req: Request, res: Response) => {
-  const payload = req.body;
+	const payload = req.body;
 
-  await AuthServices.forgotPassword(payload);
+	await AuthServices.forgotPassword(payload);
 
-  sendResponse(res, {
-    statusCode: httpStatus.OK,
-    success: true,
-    message: `OTP send to ${payload.email} successfully.`,
-    data: null,
-  });
+	sendResponse(res, {
+		statusCode: httpStatus.OK,
+		success: true,
+		message: `OTP send to ${payload.email} successfully.`,
+		data: null,
+	});
 });
 
 //* Reset Password
 const resetPassword = catchAsync(async (req: Request, res: Response) => {
-  const payload = req.body;
+	const payload = req.body;
 
-  await AuthServices.resetPassword(payload);
+	await AuthServices.resetPassword(payload);
 
-  sendResponse(res, {
-    statusCode: httpStatus.OK,
-    success: true,
-    message: `Password changed successfully.`,
-    data: null,
-  });
+	sendResponse(res, {
+		statusCode: httpStatus.OK,
+		success: true,
+		message: `Password changed successfully.`,
+		data: null,
+	});
 });
 
 //* Google Login
 const googleLogin = catchAsync(async (req: Request, res: Response) => {
-  const payload = req.body;
+	const payload = req.body;
 
-  const result = await AuthServices.googleLogin(payload);
+	const result = await AuthServices.googleLogin(payload);
 
-  const { accessToken, refreshToken } = result;
+	const { accessToken, refreshToken } = result;
 
-  res.cookie("accessToken", accessToken, {
-    httpOnly: true,
-    secure: false,
-    sameSite: "none",
-    maxAge: 1000 * 60 * 60 * 24, // 24 hour or 1 day
-  });
+	res.cookie("accessToken", accessToken, {
+		httpOnly: true,
+		secure: false,
+		sameSite: "none",
+		maxAge: 1000 * 60 * 60 * 24, // 24 hour or 1 day
+	});
 
-  res.cookie("refreshToken", refreshToken, {
-    httpOnly: true,
-    secure: false,
-    sameSite: "none",
-    maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
-  });
+	res.cookie("refreshToken", refreshToken, {
+		httpOnly: true,
+		secure: false,
+		sameSite: "none",
+		maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
+	});
 
-  sendResponse(res, {
-    statusCode: httpStatus.OK,
-    success: true,
-    message: "User logged in successfully",
-    data: {
-      accessToken,
-      refreshToken,
-    },
-  });
+	sendResponse(res, {
+		statusCode: httpStatus.OK,
+		success: true,
+		message: "User logged in successfully",
+		data: {
+			accessToken,
+			refreshToken,
+		},
+	});
 });
 
 export const AuthController = {
-  registerCustomer,
-  verifyEmail,
-  login,
-  getProfile,
-  refreshToken,
-  forgotPassword,
-  resetPassword,
-  googleLogin,
+	registerCustomer,
+	verifyEmail,
+	login,
+	getProfile,
+	refreshToken,
+	forgotPassword,
+	resetPassword,
+	googleLogin,
 };
