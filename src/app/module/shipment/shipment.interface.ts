@@ -35,3 +35,7 @@ export interface IGenerateInvoicePayload {
   transactionId: string;
   totalAmount: number;
 }
+
+export interface IShipmentStatusPayload {
+  shipmentId: string;
+}

@@ -40,8 +40,24 @@ const payShipmentCallback = catchAsync(async (req: Request, res: Response) => {
   res.redirect(redirectUrl);
 });
 
+//* Request for Pickup
+const requestPickup = catchAsync(async (req: Request, res: Response) => {
+  const payload = req.body;
+  const userId = req.user?.userId as string;
+
+  const result = await ShipmentServices.requestPickup(payload, userId);
+
+  sendResponse(res, {
+    success: true,
+    statusCode: httpStatus.OK,
+    message: "Request for pickup successfully.",
+    data: result,
+  });
+});
+
 export const ShipmentController = {
   createShipment,
   payShipment,
   payShipmentCallback,
+  requestPickup,
 };

@@ -15,4 +15,10 @@ router.post(
 
 router.get("/payment/callback", ShipmentController.payShipmentCallback);
 
+router.patch(
+  "/request-pickup",
+  auth(Role.CUSTOMER),
+  ShipmentController.requestPickup,
+);
+
 export const ShipmentRoutes = router;

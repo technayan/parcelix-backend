@@ -20,6 +20,7 @@ import type { IRequestUser } from "../auth/auth.interface";
 import type {
   ICreateShipmentPayload,
   IPayShipmentPayload,
+  IShipmentStatusPayload,
 } from "./shipment.interface";
 
 //* Create Shipment
@@ -383,8 +384,54 @@ const payShipmentCallback = async (query: Record<string, any>) => {
   return transactionResult;
 };
 
+//* Request for Pickup
+const requestPickup = async (
+  payload: IShipmentStatusPayload,
+  userId: string,
+) => {
+  const shipment = await prisma.shipment.findUnique({
+    where: { id: payload.shipmentId },
+    include: { customer: true },
+  });
+
+  if (!shipment) {
+    throw new AppError(httpStatus.NOT_FOUND, "Shipment not found!");
+  }
+
+  if (shipment.customer.userId !== userId) {
+    throw new AppError(
+      httpStatus.FORBIDDEN,
+      "You have no permission to access this resource",
+    );
+  }
+
+  if (shipment.status === ShipmentStatus.PENDING_PAYMENT) {
+    throw new AppError(
+      httpStatus.BAD_REQUEST,
+      "Please, pay for the shipment to request for pickup.",
+    );
+  }
+
+  if (shipment.status !== ShipmentStatus.PAID) {
+    throw new AppError(
+      httpStatus.BAD_REQUEST,
+      `Shipment is ${shipment.status}`,
+    );
+  }
+
+  const updatedShipment = await prisma.shipment.update({
+    where: { id: payload.shipmentId },
+    data: {
+      status: ShipmentStatus.PICKUP_REQUESTED,
+    },
+  });
+
+  return updatedShipment;
+};
+
 export const ShipmentServices = {
   createShipmentIntoDB,
   payShipment,
   payShipmentCallback,
+  requestPickup,
 };
