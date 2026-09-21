@@ -53,6 +53,7 @@ enum ShipmentStatus {
 }
 
 enum TrackingShipmentStatus {
+    PAID
     PICKED_UP
     AT_ORIGIN_HUB
     IN_TRANSIT
@@ -66,4 +67,12 @@ enum TrackingShipmentStatus {
 
 enum PaymentMethod {
     BKASH
+}
+
+enum PaymentStatus {
+    UNPAID
+    PAID
+    CANCELLED
+    FAILED
+    REFUNDED
 }

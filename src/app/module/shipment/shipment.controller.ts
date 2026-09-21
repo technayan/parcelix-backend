@@ -19,6 +19,29 @@ const createShipment = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+//* Pay Shipment
+const payShipment = catchAsync(async (req: Request, res: Response) => {
+  const payload = req.body;
+  const user = req.user;
+
+  const result = await ShipmentServices.payShipment(payload, user!);
+
+  sendResponse(res, {
+    success: true,
+    statusCode: httpStatus.CREATED,
+    message: "Payment URL created.",
+    data: result,
+  });
+});
+
+//* Pay Shipment Callback
+const payShipmentCallback = catchAsync(async (req: Request, res: Response) => {
+  const { redirectUrl } = await ShipmentServices.payShipmentCallback(req.query);
+  res.redirect(redirectUrl);
+});
+
 export const ShipmentController = {
   createShipment,
+  payShipment,
+  payShipmentCallback,
 };

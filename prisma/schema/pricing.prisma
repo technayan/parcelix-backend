@@ -4,6 +4,7 @@ model Pricing {
     insideDhaka     Boolean  @default(true)
     base            Decimal  @db.Decimal(8, 2)
     additionalPerKg Decimal  @db.Decimal(8, 2)
+    courierEarning  Decimal  @db.Decimal(8, 2)
     createdAt       DateTime @default(now())
     updatedAt       DateTime @updatedAt
 

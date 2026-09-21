@@ -1,7 +1,26 @@
+import type { UploadApiResponse } from "cloudinary";
+import ejs from "ejs";
 import httpStatus from "http-status";
+import path from "path";
+import {
+  PaymentStatus,
+  ShipmentStatus,
+  TrackingShipmentStatus,
+} from "../../../generated/prisma/enums";
+import config from "../../config";
+import { getBkashIdToken } from "../../lib/bkash";
+import { cloudinary } from "../../lib/cloudinary";
+import { transporter } from "../../lib/nodemailer";
 import { prisma } from "../../lib/prisma";
 import { AppError } from "../../utils/AppError";
-import type { ICreateShipmentPayload } from "./shipment.interface";
+import { generateInvoicePDF } from "../../utils/generateInvoicePDF";
+import { generateInvoiceNumber } from "../../utils/getInvoiceNumber";
+import { generateTrackingId } from "../../utils/getTrackingId";
+import type { IRequestUser } from "../auth/auth.interface";
+import type {
+  ICreateShipmentPayload,
+  IPayShipmentPayload,
+} from "./shipment.interface";
 
 //* Create Shipment
 const createShipmentIntoDB = async (
@@ -50,20 +69,322 @@ const createShipmentIntoDB = async (
       deliveryFee = base;
     }
 
+    const companyEarning = deliveryFee - Number(pricing.courierEarning);
+
     const shipment = await tx.shipment.create({
       data: {
         ...payload,
         customerId: existingUser?.customer?.id as string,
         deliveryFee,
       },
+      include: { customer: { include: { user: true } } },
     });
 
-    return shipment;
+    const bkashIdToken = await getBkashIdToken();
+
+    const bkashCreatePaymentResponse = await fetch(
+      `${config.bkash_base_url}/tokenized/checkout/create`,
+      {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          accept: "application/json",
+          Authorization: bkashIdToken,
+          "X-App-key": config.bkash_app_key,
+        },
+        body: JSON.stringify({
+          mode: "0011",
+          payerReference: existingUser.email,
+          callbackURL: `${config.bkash_callback_url}/shipments/payment/callback`,
+          amount: deliveryFee,
+          currency: "BDT",
+          intent: "sale",
+          merchantInvoiceNumber: shipment.id,
+        }),
+      },
+    );
+
+    const bkashCreatePaymentResult = await bkashCreatePaymentResponse.json();
+
+    //* Create Payment
+    await tx.payment.create({
+      data: {
+        totalAmount: deliveryFee,
+        merchantInvoiceNumber: shipment.id,
+        bkashPaymentId: bkashCreatePaymentResult.paymentID,
+        payerReference: existingUser.email,
+        getwayResponse: bkashCreatePaymentResult,
+        shipmentId: shipment.id,
+        companyEarning,
+        courierEarning: pricing.courierEarning,
+      },
+    });
+
+    return bkashCreatePaymentResult.bkashURL;
   });
 
+  return { paymentUrl: transactionResult };
+};
+
+//* Pay Shipment
+const payShipment = async (
+  payload: IPayShipmentPayload,
+  user: IRequestUser,
+) => {
+  const shipmentId = payload.shipmentId;
+
+  const existingShipment = await prisma.shipment.findUnique({
+    where: { id: shipmentId },
+    include: {
+      customer: true,
+    },
+  });
+
+  if (!existingShipment) {
+    throw new AppError(httpStatus.NOT_FOUND, "Shipment not found!");
+  }
+
+  if (existingShipment.status !== ShipmentStatus.PENDING_PAYMENT) {
+    throw new AppError(
+      httpStatus.BAD_REQUEST,
+      `Shipment is ${existingShipment.status}`,
+    );
+  }
+
+  const amount = existingShipment.deliveryFee.toString();
+
+  const bkashIdToken = await getBkashIdToken();
+
+  const bkashCreatePaymentResponse = await fetch(
+    `${config.bkash_base_url}/tokenized/checkout/create`,
+    {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        accept: "application/json",
+        Authorization: bkashIdToken,
+        "X-App-key": config.bkash_app_key,
+      },
+      body: JSON.stringify({
+        mode: "0011",
+        payerReference: user.email,
+        callbackURL: `${config.bkash_callback_url}/shipments/payment/callback`,
+        amount,
+        currency: "BDT",
+        intent: "sale",
+        merchantInvoiceNumber: existingShipment.id,
+      }),
+    },
+  );
+
+  const bkashCreatePaymentResult = await bkashCreatePaymentResponse.json();
+
+  await prisma.payment.update({
+    where: { shipmentId: existingShipment.id },
+    data: {
+      merchantInvoiceNumber: bkashCreatePaymentResult.merchantInvoiceNumber,
+      getwayResponse: bkashCreatePaymentResult,
+      bkashPaymentId: bkashCreatePaymentResult.paymentID,
+    },
+  });
+
+  return { paymentUrl: bkashCreatePaymentResult.bkashURL };
+};
+
+//* Pay Shipment Callback
+const payShipmentCallback = async (query: Record<string, any>) => {
+  const transactionResult = await prisma.$transaction(
+    async (tx) => {
+      const paymentId = query.paymentID;
+      if (!paymentId)
+        throw new AppError(httpStatus.NOT_FOUND, "PaymentID not found!");
+
+      const status = query.status;
+      if (!status)
+        throw new AppError(httpStatus.BAD_REQUEST, "Payment failed!");
+
+      const bkashIdToken = await getBkashIdToken();
+      if (!bkashIdToken)
+        throw new AppError(httpStatus.NOT_FOUND, "Bkash IdToken not found!");
+
+      //* Payment Execute
+      const paymentExecuteResponse = await fetch(
+        `${config.bkash_base_url}/tokenized/checkout/execute`,
+        {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            accept: "application/json",
+            authorization: bkashIdToken,
+            "X-App-Key": config.bkash_app_key,
+          },
+          body: JSON.stringify({
+            paymentID: paymentId,
+          }),
+        },
+      );
+
+      const paymentExecuteResult = await paymentExecuteResponse.json();
+
+      if (status === "success") {
+        const shipment = await tx.shipment.findUnique({
+          where: { id: paymentExecuteResult.merchantInvoiceNumber },
+          include: {
+            customer: {
+              include: { user: true },
+            },
+          },
+        });
+
+        if (!shipment) {
+          throw new AppError(httpStatus.NOT_FOUND, "Shipment not found!");
+        }
+
+        const invoiceNumber = generateInvoiceNumber();
+
+        const trackingId = generateTrackingId();
+
+        const updatedPayment = await tx.payment.update({
+          where: { bkashPaymentId: paymentId },
+          data: {
+            bkashTrxId: paymentExecuteResult.trxID,
+            getwayResponse: paymentExecuteResult,
+            paidAt: paymentExecuteResult.paymentExecuteTime,
+            status: PaymentStatus.PAID,
+          },
+        });
+
+        //* Genereate Invoice PDF
+        const payload = {
+          invoiceNumber,
+          shipmentId: shipment.id,
+          trackingId,
+          senderName: shipment.senderName,
+          senderPhone: shipment.senderPhone,
+          senderAddress: shipment.senderAddress,
+          receiverName: shipment.receiverName,
+          receiverPhone: shipment.receiverPhone,
+          receiverAddress: shipment.receiverAddress,
+          weight: Number(shipment.weight),
+          isFragile: shipment.isFragile,
+          paymentGateway: updatedPayment.paymentGateway,
+          transactionId: updatedPayment.bkashTrxId as string,
+          totalAmount: Number(updatedPayment.totalAmount),
+        };
+        const invoicePDF = await generateInvoicePDF(payload);
+
+        // Upload Invoice to Cloudinary
+        const invoiceUploadResult = await new Promise<UploadApiResponse>(
+          (resolve, reject) => {
+            cloudinary.uploader
+              .upload_stream(
+                { resource_type: "raw", format: "pdf" },
+                (error, result) => {
+                  if (error) {
+                    return reject(error);
+                  }
+
+                  if (!result) {
+                    return reject(
+                      new AppError(
+                        httpStatus.INTERNAL_SERVER_ERROR,
+                        "No Result Returned From Cloudinary",
+                      ),
+                    );
+                  }
+
+                  resolve(result);
+                },
+              )
+              .end(invoicePDF);
+          },
+        );
+
+        await tx.shipment.update({
+          where: { id: paymentExecuteResult.merchantInvoiceNumber },
+          data: {
+            status: ShipmentStatus.PAID,
+            trackingId,
+            invoiceUrl: invoiceUploadResult.secure_url,
+            invoicePublicId: invoiceUploadResult.public_id,
+          },
+        });
+
+        await tx.trackingShipment.create({
+          data: {
+            shipmentId: paymentExecuteResult.merchantInvoiceNumber,
+            status: TrackingShipmentStatus.PAID,
+          },
+        });
+
+        // Send Invoice via Email
+        const templatePath = path.join(
+          process.cwd(),
+          "src/app/templates/payment.ejs",
+        );
+
+        const html = await ejs.renderFile(templatePath, {
+          name: shipment.customer.user.name,
+          trackingId,
+          invoiceNumber,
+          amount: updatedPayment.totalAmount,
+          paymentGateway: updatedPayment.paymentGateway,
+        });
+
+        await transporter.sendMail({
+          from: config.email_sender,
+          to: shipment.customer.user.email,
+          subject: "Shipment Payment Invoice - Parcelix",
+          html,
+          attachments: [
+            {
+              filename: "invoice.pdf",
+              content: invoicePDF,
+            },
+          ],
+        });
+
+        return {
+          redirectUrl: `${config.frontend_url}/dashboard/shipments?status=success`,
+        };
+      } else if (status === "failure") {
+        await tx.payment.update({
+          where: { bkashPaymentId: paymentId },
+          data: {
+            getwayResponse: paymentExecuteResult,
+            status: PaymentStatus.FAILED,
+          },
+        });
+        return {
+          redirectUrl: `${config.frontend_url}/dashboard/shipments?status=failure`,
+        };
+      } else if (status === "cancel") {
+        await tx.payment.update({
+          where: { bkashPaymentId: paymentId },
+          data: {
+            getwayResponse: paymentExecuteResult,
+            status: PaymentStatus.CANCELLED,
+          },
+        });
+        return {
+          redirectUrl: `${config.frontend_url}/dashboard/shipments?status=cancel`,
+        };
+      } else {
+        return {
+          redirectUrl: `${config.frontend_url}/dashboard/shipments?error=payment-failed`,
+        };
+      }
+    },
+    {
+      maxWait: 10000,
+      timeout: 30000,
+    },
+  );
   return transactionResult;
 };
 
 export const ShipmentServices = {
   createShipmentIntoDB,
+  payShipment,
+  payShipmentCallback,
 };
