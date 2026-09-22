@@ -100,9 +100,10 @@ const getShipmentById = catchAsync(async (req: Request, res: Response) => {
 
 //* Assign Courier
 const assignCourier = catchAsync(async (req: Request, res: Response) => {
+  const shipmentId = req.params.shipmentId as string;
   const payload = req.body;
 
-  const result = await ShipmentServices.assignCourier(payload);
+  const result = await ShipmentServices.assignCourier(shipmentId, payload);
 
   sendResponse(res, {
     success: true,
@@ -116,12 +117,36 @@ const assignCourier = catchAsync(async (req: Request, res: Response) => {
 const getAssignedShipments = catchAsync(async (req: Request, res: Response) => {
   const userId = req.user?.userId as string;
 
-  const result = await ShipmentServices.getAssignedShipments(req.query, userId);
+  const { data, meta } = await ShipmentServices.getAssignedShipments(
+    req.query,
+    userId,
+  );
 
   sendResponse(res, {
     success: true,
     statusCode: httpStatus.OK,
     message: "Assigned shipments fetched successfully.",
+    data: data,
+    meta: meta,
+  });
+});
+
+//* Update Shipment Status
+const updateShipmentStatus = catchAsync(async (req: Request, res: Response) => {
+  const shipmentId = req.params.shipmentId as string;
+  const payload = req.body;
+  const userId = req.user?.userId as string;
+
+  const result = await ShipmentServices.updateShipmentStatus(
+    shipmentId,
+    payload,
+    userId,
+  );
+
+  sendResponse(res, {
+    success: true,
+    statusCode: httpStatus.OK,
+    message: "Shipment status updated successfully.",
     data: result,
   });
 });
@@ -136,4 +161,5 @@ export const ShipmentController = {
   cancelShipment,
   assignCourier,
   getAssignedShipments,
+  updateShipmentStatus,
 };

@@ -1,3 +1,5 @@
+import type { TrackingShipmentStatus } from "../../../generated/prisma/enums";
+
 export interface ICreateShipmentPayload {
   originZoneId: string;
   originHubId: string;
@@ -41,6 +43,10 @@ export interface IShipmentStatusPayload {
 }
 
 export interface IAssignCourierPayload {
-  shipmentId: string;
   courierId: string;
+}
+
+export interface IUpdateShipmentStatusPayload {
+  status: TrackingShipmentStatus;
+  returnReason?: string;
 }

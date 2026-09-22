@@ -27,6 +27,7 @@ import type {
   ICreateShipmentPayload,
   IPayShipmentPayload,
   IShipmentStatusPayload,
+  IUpdateShipmentStatusPayload,
 } from "./shipment.interface";
 
 //* Create Shipment
@@ -701,8 +702,10 @@ const getShipmentById = async (shipmentId: string, user: IRequestUser) => {
 };
 
 //* Assign Courier
-const assignCourier = async (payload: IAssignCourierPayload) => {
-  const { shipmentId, courierId } = payload;
+const assignCourier = async (
+  shipmentId: string,
+  payload: IAssignCourierPayload,
+) => {
   const transactionResult = await prisma.$transaction(async (tx) => {
     const shipment = await tx.shipment.findUnique({
       where: { id: shipmentId },
@@ -720,7 +723,7 @@ const assignCourier = async (payload: IAssignCourierPayload) => {
     }
 
     const courier = await tx.courier.findUnique({
-      where: { id: courierId },
+      where: { id: payload.courierId },
     });
 
     if (!courier) {
@@ -738,7 +741,7 @@ const assignCourier = async (payload: IAssignCourierPayload) => {
     const updatedShipment = tx.shipment.update({
       where: { id: shipmentId },
       data: {
-        courierId,
+        courierId: courier.id,
         status: ShipmentStatus.COURIER_ASSIGNED,
       },
     });
@@ -757,44 +760,265 @@ const getAssignedShipments = async (query: IQuery, userId: string) => {
   const sortBy = query.sortBy ? query.sortBy : "createdAt";
   const sortOrder = query.sortOrder ? query.sortOrder : "asc";
 
-  const courier = await prisma.courier.findUnique({
-    where: { userId },
+  const transactionResult = await prisma.$transaction(async (tx) => {
+    const courier = await tx.courier.findUnique({
+      where: { userId },
+    });
+
+    if (!courier) {
+      throw new AppError(httpStatus.NOT_FOUND, "Courier not found!");
+    }
+
+    const assignedShipments = await tx.shipment.findMany({
+      where: { courierId: courier.id, status: ShipmentStatus.COURIER_ASSIGNED },
+      take: limit,
+      skip,
+      orderBy: { [sortBy]: sortOrder },
+      select: {
+        id: true,
+        courierId: true,
+        customerId: true,
+        senderName: true,
+        status: true,
+        originZone: { select: { name: true } },
+        originHub: { select: { name: true } },
+        destinationZone: { select: { name: true } },
+        destinationHub: { select: { name: true } },
+      },
+    });
+
+    const total = await tx.shipment.count({
+      where: { courierId: courier.id, status: ShipmentStatus.COURIER_ASSIGNED },
+    });
+
+    return {
+      data: assignedShipments,
+      meta: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
   });
 
-  if (!courier) {
-    throw new AppError(httpStatus.NOT_FOUND, "Courier not found!");
-  }
+  return transactionResult;
+};
 
-  const assignedShipments = await prisma.shipment.findMany({
-    where: { courierId: courier.id, status: ShipmentStatus.COURIER_ASSIGNED },
-    take: limit,
-    skip,
-    orderBy: { [sortBy]: sortOrder },
-    select: {
-      id: true,
-      courierId: true,
-      customerId: true,
-      senderName: true,
-      originZone: { select: { name: true } },
-      originHub: { select: { name: true } },
-      destinationZone: { select: { name: true } },
-      destinationHub: { select: { name: true } },
-    },
+//* Update Shipment Status
+const updateShipmentStatus = async (
+  shipmentId: string,
+  payload: IUpdateShipmentStatusPayload,
+  userId: string,
+) => {
+  const transactionResult = await prisma.$transaction(async (tx) => {
+    const shipment = await tx.shipment.findUnique({
+      where: { id: shipmentId },
+      include: {
+        customer: {
+          select: {
+            user: {
+              select: {
+                name: true,
+                email: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!shipment) {
+      throw new AppError(httpStatus.NOT_FOUND, "Shipment not found!");
+    }
+
+    const courier = await tx.courier.findUnique({
+      where: { userId },
+    });
+
+    if (shipment.courierId !== courier?.id) {
+      throw new AppError(
+        httpStatus.BAD_REQUEST,
+        "You have no permission to access this resource.",
+      );
+    }
+
+    if (shipment.status === ShipmentStatus.CANCELLED) {
+      throw new AppError(httpStatus.BAD_REQUEST, "The shipment is cancelled.");
+    }
+
+    if (
+      shipment.status === ShipmentStatus.PENDING_PAYMENT ||
+      shipment.status === ShipmentStatus.PAID ||
+      shipment.status === ShipmentStatus.PICKUP_REQUESTED
+    ) {
+      throw new AppError(
+        httpStatus.FORBIDDEN,
+        `You have no permission to access this resource.s`,
+      );
+    }
+
+    if (
+      shipment.status === ShipmentStatus.COURIER_ASSIGNED &&
+      payload.status !== ShipmentStatus.PICKED_UP
+    ) {
+      throw new AppError(
+        httpStatus.CONFLICT,
+        `Shipment with status ${shipment.status} can not be updated to ${payload.status}. Next status must be ${ShipmentStatus.PICKED_UP}`,
+      );
+    }
+
+    if (
+      shipment.status === ShipmentStatus.PICKED_UP &&
+      payload.status !== ShipmentStatus.AT_ORIGIN_HUB
+    ) {
+      throw new AppError(
+        httpStatus.CONFLICT,
+        `Shipment with status ${shipment.status} can not be updated to ${payload.status}. Next status must be ${ShipmentStatus.AT_ORIGIN_HUB}`,
+      );
+    }
+
+    if (
+      shipment.status === ShipmentStatus.AT_ORIGIN_HUB &&
+      payload.status !== ShipmentStatus.IN_TRANSIT
+    ) {
+      throw new AppError(
+        httpStatus.CONFLICT,
+        `Shipment with status ${shipment.status} can not be updated to ${payload.status}. Next status must be ${ShipmentStatus.IN_TRANSIT}`,
+      );
+    }
+
+    if (
+      shipment.status === ShipmentStatus.IN_TRANSIT &&
+      payload.status !== ShipmentStatus.AT_DESTINATION_HUB
+    ) {
+      throw new AppError(
+        httpStatus.CONFLICT,
+        `Shipment with status ${shipment.status} can not be updated to ${payload.status}. Next status must be ${ShipmentStatus.AT_DESTINATION_HUB}`,
+      );
+    }
+
+    if (
+      shipment.status === ShipmentStatus.AT_DESTINATION_HUB &&
+      payload.status !== ShipmentStatus.OUT_FOR_DELIVERY
+    ) {
+      throw new AppError(
+        httpStatus.CONFLICT,
+        `Shipment with status ${shipment.status} can not be updated to ${payload.status}. Next status must be ${ShipmentStatus.OUT_FOR_DELIVERY}`,
+      );
+    }
+
+    if (
+      shipment.status === ShipmentStatus.OUT_FOR_DELIVERY &&
+      payload.status !== ShipmentStatus.DELIVERED &&
+      payload.status !== ShipmentStatus.DELIVERY_FAILED
+    ) {
+      throw new AppError(
+        httpStatus.CONFLICT,
+        `Shipment with status ${shipment.status} can not be updated to ${payload.status}. Next status can be either ${ShipmentStatus.DELIVERED} or ${ShipmentStatus.DELIVERY_FAILED}`,
+      );
+    }
+
+    if (
+      shipment.status === ShipmentStatus.DELIVERY_FAILED &&
+      payload.status !== ShipmentStatus.RETURNED
+    ) {
+      throw new AppError(
+        httpStatus.CONFLICT,
+        `Shipment with status ${shipment.status} can not be updated to ${payload.status}. Next status must be ${ShipmentStatus.RETURNED}`,
+      );
+    }
+
+    if (payload.status === ShipmentStatus.RETURNED && !payload.returnReason) {
+      throw new AppError(
+        httpStatus.CONFLICT,
+        `Return reason must be provided while returning the shipment`,
+      );
+    }
+
+    if (shipment.status === ShipmentStatus.DELIVERED) {
+      throw new AppError(
+        httpStatus.BAD_REQUEST,
+        `The shipment is already delivered.`,
+      );
+    }
+
+    if (shipment.status === ShipmentStatus.RETURNED) {
+      throw new AppError(
+        httpStatus.BAD_REQUEST,
+        `The shipment is already returned.`,
+      );
+    }
+
+    const pickupDate =
+      payload.status === ShipmentStatus.PICKED_UP ? new Date() : undefined;
+
+    const deliveryDate =
+      payload.status === ShipmentStatus.DELIVERED ? new Date() : undefined;
+
+    const returnDate =
+      payload.status === ShipmentStatus.RETURNED ? new Date() : undefined;
+
+    const reason =
+      payload.status === ShipmentStatus.RETURNED
+        ? payload.returnReason
+        : undefined;
+
+    // Update Shipment Status
+    const updatedShipment = await tx.shipment.update({
+      where: { id: shipmentId },
+      data: {
+        status: payload.status,
+        pickupDate,
+        returnReason: reason,
+        deliveredAt: deliveryDate,
+        returnedAt: returnDate,
+      },
+    });
+
+    // Update Shipment Tracking
+    await tx.trackingShipment.create({
+      data: {
+        shipmentId: updatedShipment.id,
+        status: payload.status,
+      },
+    });
+
+    // Send Email
+    if (
+      payload.status === ShipmentStatus.RETURNED ||
+      payload.status === ShipmentStatus.DELIVERED
+    ) {
+      const isDelivered = payload.status === ShipmentStatus.DELIVERED;
+
+      const tempatePath = path.join(
+        process.cwd(),
+        `src/app/templates/${isDelivered ? "shipment-delivered.ejs" : "shipment-returned.ejs"}`,
+      );
+
+      const html = await ejs.renderFile(tempatePath, {
+        name: shipment.customer.user.name,
+        trackingId: updatedShipment.trackingId,
+        receiverName: updatedShipment.receiverName,
+        deliveredAt: updatedShipment.deliveredAt,
+        returnReason: updatedShipment.returnReason,
+        returnedAt: updatedShipment.returnedAt,
+      });
+
+      await transporter.sendMail({
+        from: config.email_sender,
+        to: shipment.customer.user.email,
+        subject: isDelivered
+          ? "Shipment Delivered - Parcelix"
+          : "Shipment Returned - Parcelix",
+        html,
+      });
+    }
+
+    return updatedShipment;
   });
 
-  const total = await prisma.shipment.count({
-    where: { courierId: courier.id, status: ShipmentStatus.COURIER_ASSIGNED },
-  });
-
-  return {
-    data: assignedShipments,
-    meta: {
-      page,
-      limit,
-      total,
-      totalPages: Math.ceil(total / limit),
-    },
-  };
+  return transactionResult;
 };
 
 export const ShipmentServices = {
@@ -807,4 +1031,5 @@ export const ShipmentServices = {
   cancelShipment,
   assignCourier,
   getAssignedShipments,
+  updateShipmentStatus,
 };

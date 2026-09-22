@@ -35,8 +35,8 @@ router.post(
   ShipmentController.cancelShipment,
 );
 
-router.post(
-  "/assign-courier",
+router.patch(
+  "/assign-courier/:shipmentId",
   auth(Role.ADMIN),
   ShipmentController.assignCourier,
 );
@@ -45,6 +45,12 @@ router.get(
   "/assigned",
   auth(Role.COURIER),
   ShipmentController.getAssignedShipments,
+);
+
+router.patch(
+  "/update-status/:shipmentId",
+  auth(Role.COURIER),
+  ShipmentController.updateShipmentStatus,
 );
 
 export const ShipmentRoutes = router;

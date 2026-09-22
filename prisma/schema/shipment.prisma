@@ -25,6 +25,8 @@ model Shipment {
     isFragile          Boolean            @default(false)
     status             ShipmentStatus     @default(PENDING_PAYMENT)
     pickupDate         DateTime?
+    deliveredAt        DateTime?
+    returnedAt         DateTime?
     pickupInstructions String?
     returnReason       String?
     invoiceUrl         String?
