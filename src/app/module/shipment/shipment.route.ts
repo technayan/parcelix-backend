@@ -21,4 +21,6 @@ router.patch(
   ShipmentController.requestPickup,
 );
 
+router.get("/", auth(Role.ADMIN), ShipmentController.getAllShipments);
+
 export const ShipmentRoutes = router;

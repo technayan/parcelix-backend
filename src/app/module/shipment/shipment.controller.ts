@@ -55,9 +55,23 @@ const requestPickup = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+//* Get All Shipments (Admin)
+const getAllShipments = catchAsync(async (req: Request, res: Response) => {
+  const { data, meta } = await ShipmentServices.getAllShipments(req.query);
+
+  sendResponse(res, {
+    success: true,
+    statusCode: httpStatus.OK,
+    message: "All shipments fetched successfully.",
+    data: data,
+    meta: meta,
+  });
+});
+
 export const ShipmentController = {
   createShipment,
   payShipment,
   payShipmentCallback,
   requestPickup,
+  getAllShipments,
 };

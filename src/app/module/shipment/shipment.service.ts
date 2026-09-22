@@ -7,7 +7,9 @@ import {
   ShipmentStatus,
   TrackingShipmentStatus,
 } from "../../../generated/prisma/enums";
+import type { ShipmentWhereInput } from "../../../generated/prisma/models";
 import config from "../../config";
+import type { IQuery } from "../../interfaces";
 import { getBkashIdToken } from "../../lib/bkash";
 import { cloudinary } from "../../lib/cloudinary";
 import { transporter } from "../../lib/nodemailer";
@@ -429,9 +431,80 @@ const requestPickup = async (
   return updatedShipment;
 };
 
+//* Get All Shipments (Admin)
+const getAllShipments = async (query: IQuery) => {
+  const limit = query.limit ? Number(query.limit) : 10;
+  const page = query.page ? Number(query.page) : 1;
+  const skip = (page - 1) * limit;
+  const sortBy = query.sortBy ? query.sortBy : "createdAt";
+  const sortOrder = query.sortOrder ? query.sortOrder : "desc";
+
+  const andConditions: ShipmentWhereInput[] = [];
+
+  if (query.searchTerm) {
+    andConditions.push({
+      OR: [
+        { description: { contains: query.searchTerm, mode: "insensitive" } },
+        { senderName: { contains: query.searchTerm, mode: "insensitive" } },
+        { receiverName: { contains: query.searchTerm, mode: "insensitive" } },
+        { senderPhone: { contains: query.searchTerm, mode: "insensitive" } },
+        { receiverPhone: { contains: query.searchTerm, mode: "insensitive" } },
+        { trackingId: { contains: query.searchTerm, mode: "insensitive" } },
+      ],
+    });
+  }
+
+  if (query.status) {
+    andConditions.push({ status: query.status });
+  }
+
+  if (query.customerId) {
+    andConditions.push({ customerId: query.customerId });
+  }
+
+  if (query.courierId) {
+    andConditions.push({ courierId: query.courierId });
+  }
+
+  if (query.trackingId) {
+    andConditions.push({ trackingId: query.trackingId });
+  }
+
+  const shipments = await prisma.shipment.findMany({
+    where: { AND: andConditions },
+    take: limit,
+    skip,
+    orderBy: { [sortBy]: sortOrder },
+    select: {
+      id: true,
+      trackingId: true,
+      senderName: true,
+      courier: { select: { user: { select: { name: true } } } },
+      originHub: { select: { name: true } },
+      destinationHub: { select: { name: true } },
+      status: true,
+    },
+  });
+
+  const total = await prisma.shipment.count({
+    where: { AND: andConditions },
+  });
+
+  return {
+    data: shipments,
+    meta: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+    },
+  };
+};
+
 export const ShipmentServices = {
   createShipmentIntoDB,
   payShipment,
   payShipmentCallback,
   requestPickup,
+  getAllShipments,
 };
