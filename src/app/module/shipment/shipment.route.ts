@@ -23,4 +23,10 @@ router.patch(
 
 router.get("/", auth(Role.ADMIN), ShipmentController.getAllShipments);
 
+router.get(
+  "/:shipmentId",
+  auth(Role.ADMIN, Role.CUSTOMER, Role.COURIER),
+  ShipmentController.getShipmentById,
+);
+
 export const ShipmentRoutes = router;

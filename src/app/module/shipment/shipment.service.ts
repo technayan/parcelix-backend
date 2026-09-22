@@ -4,6 +4,7 @@ import httpStatus from "http-status";
 import path from "path";
 import {
   PaymentStatus,
+  Role,
   ShipmentStatus,
   TrackingShipmentStatus,
 } from "../../../generated/prisma/enums";
@@ -501,10 +502,56 @@ const getAllShipments = async (query: IQuery) => {
   };
 };
 
+//* Get Shipment by ID
+const getShipmentById = async (shipmentId: string, user: IRequestUser) => {
+  const shipment = await prisma.shipment.findUnique({
+    where: { id: shipmentId },
+    include: {
+      customer: {
+        select: {
+          id: true,
+          user: { select: { name: true, email: true, phone: true } },
+        },
+      },
+      courier: {
+        select: { id: true, user: { select: { name: true, email: true } } },
+      },
+      payment: {
+        select: { id: true, bkashTrxId: true, totalAmount: true, status: true },
+      },
+    },
+  });
+
+  if (!shipment) {
+    throw new AppError(httpStatus.NOT_FOUND, "Shipment not found!");
+  }
+
+  if (user.role === Role.CUSTOMER) {
+    if (shipment.customer.user.email !== user.email) {
+      throw new AppError(
+        httpStatus.FORBIDDEN,
+        "You have no permission to access this resource.",
+      );
+    }
+  }
+
+  if (user.role === Role.COURIER) {
+    if (shipment.courier?.user.email !== user.email) {
+      throw new AppError(
+        httpStatus.FORBIDDEN,
+        "You have no permission to access this resource.",
+      );
+    }
+  }
+
+  return shipment;
+};
+
 export const ShipmentServices = {
   createShipmentIntoDB,
   payShipment,
   payShipmentCallback,
   requestPickup,
   getAllShipments,
+  getShipmentById,
 };

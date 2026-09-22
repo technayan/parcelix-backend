@@ -68,10 +68,26 @@ const getAllShipments = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+//* Get Shipment By ID
+const getShipmentById = catchAsync(async (req: Request, res: Response) => {
+  const shipmentId = req.params.shipmentId as string;
+  const user = req.user!;
+
+  const result = await ShipmentServices.getShipmentById(shipmentId, user);
+
+  sendResponse(res, {
+    success: true,
+    statusCode: httpStatus.OK,
+    message: "Shipment details fetched successfully.",
+    data: result,
+  });
+});
+
 export const ShipmentController = {
   createShipment,
   payShipment,
   payShipmentCallback,
   requestPickup,
   getAllShipments,
+  getShipmentById,
 };
