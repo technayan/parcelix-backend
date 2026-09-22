@@ -151,6 +151,24 @@ const updateShipmentStatus = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+//* Get My Shipments
+const getMyShipments = catchAsync(async (req: Request, res: Response) => {
+  const userId = req.user?.userId as string;
+
+  const { data, meta } = await ShipmentServices.getMyShipments(
+    req.query,
+    userId,
+  );
+
+  sendResponse(res, {
+    success: true,
+    statusCode: httpStatus.OK,
+    message: "Shipments fetched successfully.",
+    data: data,
+    meta: meta,
+  });
+});
+
 export const ShipmentController = {
   createShipment,
   payShipment,
@@ -162,4 +180,5 @@ export const ShipmentController = {
   assignCourier,
   getAssignedShipments,
   updateShipmentStatus,
+  getMyShipments,
 };

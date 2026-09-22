@@ -7,16 +7,16 @@ import { UserController } from "./user.controller";
 const router = Router();
 
 router.patch(
-	"/profile/:id",
-	auth(Role.ADMIN, Role.COURIER, Role.CUSTOMER),
-	UserController.updateUser,
+  "/profile",
+  auth(Role.ADMIN, Role.COURIER, Role.CUSTOMER),
+  UserController.updateUser,
 );
 
 router.patch(
-	"/profile-photo",
-	auth(Role.ADMIN, Role.COURIER, Role.CUSTOMER),
-	upload.single("profilePhoto"),
-	UserController.uploadProfilePhoto,
+  "/profile-photo",
+  auth(Role.ADMIN, Role.COURIER, Role.CUSTOMER),
+  upload.single("profilePhoto"),
+  UserController.uploadProfilePhoto,
 );
 
 export const UserRoutes = router;

@@ -1029,6 +1029,67 @@ const updateShipmentStatus = async (
   return transactionResult;
 };
 
+//* Get My Shipments (Customer)
+const getMyShipments = async (query: IQuery, userId: string) => {
+  const limit = query.limit ? Number(query.limit) : 10;
+  const page = query.page ? Number(query.page) : 1;
+  const skip = (page - 1) * limit;
+  const sortBy = query.sortBy ? query.sortBy : "createdAt";
+  const sortOrder = query.sortOrder ? query.sortOrder : "desc";
+
+  const transactionResult = await prisma.$transaction(async (tx) => {
+    const customer = await tx.customer.findUnique({
+      where: { userId },
+    });
+
+    if (!customer) {
+      throw new AppError(httpStatus.NOT_FOUND, "Customer not found!");
+    }
+
+    const andConditions: ShipmentWhereInput[] = [];
+
+    andConditions.push({ customerId: customer.id });
+
+    if (query.status) {
+      andConditions.push({ status: query.status });
+    }
+
+    const shipments = await tx.shipment.findMany({
+      where: { AND: andConditions },
+      take: limit,
+      skip,
+      orderBy: { [sortBy]: sortOrder },
+      select: {
+        id: true,
+        courierId: true,
+        customerId: true,
+        senderName: true,
+        status: true,
+        originZone: { select: { name: true } },
+        originHub: { select: { name: true } },
+        destinationZone: { select: { name: true } },
+        destinationHub: { select: { name: true } },
+      },
+    });
+
+    const total = await tx.shipment.count({
+      where: { AND: andConditions },
+    });
+
+    return {
+      data: shipments,
+      meta: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  });
+
+  return transactionResult;
+};
+
 export const ShipmentServices = {
   createShipmentIntoDB,
   payShipment,
@@ -1040,4 +1101,5 @@ export const ShipmentServices = {
   assignCourier,
   getAssignedShipments,
   updateShipmentStatus,
+  getMyShipments,
 };

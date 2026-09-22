@@ -53,4 +53,10 @@ router.patch(
   ShipmentController.updateShipmentStatus,
 );
 
+router.get(
+  "/my-shipments",
+  auth(Role.CUSTOMER),
+  ShipmentController.getMyShipments,
+);
+
 export const ShipmentRoutes = router;
