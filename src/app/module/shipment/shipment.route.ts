@@ -24,7 +24,7 @@ router.patch(
 router.get("/", auth(Role.ADMIN), ShipmentController.getAllShipments);
 
 router.get(
-  "/:shipmentId",
+  "/details/:shipmentId",
   auth(Role.ADMIN, Role.CUSTOMER, Role.COURIER),
   ShipmentController.getShipmentById,
 );
@@ -39,6 +39,12 @@ router.post(
   "/assign-courier",
   auth(Role.ADMIN),
   ShipmentController.assignCourier,
+);
+
+router.get(
+  "/assigned",
+  auth(Role.COURIER),
+  ShipmentController.getAssignedShipments,
 );
 
 export const ShipmentRoutes = router;

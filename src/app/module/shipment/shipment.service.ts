@@ -660,6 +660,18 @@ const getShipmentById = async (shipmentId: string, user: IRequestUser) => {
       payment: {
         select: { id: true, bkashTrxId: true, totalAmount: true, status: true },
       },
+      originZone: {
+        select: { name: true },
+      },
+      originHub: {
+        select: { name: true },
+      },
+      destinationZone: {
+        select: { name: true },
+      },
+      destinationHub: {
+        select: { name: true },
+      },
     },
   });
 
@@ -737,6 +749,54 @@ const assignCourier = async (payload: IAssignCourierPayload) => {
   return transactionResult;
 };
 
+//* Get Assigned Shipments for (Courier)
+const getAssignedShipments = async (query: IQuery, userId: string) => {
+  const limit = query.limit ? Number(query.limit) : 10;
+  const page = query.page ? Number(query.page) : 1;
+  const skip = (page - 1) * limit;
+  const sortBy = query.sortBy ? query.sortBy : "createdAt";
+  const sortOrder = query.sortOrder ? query.sortOrder : "asc";
+
+  const courier = await prisma.courier.findUnique({
+    where: { userId },
+  });
+
+  if (!courier) {
+    throw new AppError(httpStatus.NOT_FOUND, "Courier not found!");
+  }
+
+  const assignedShipments = await prisma.shipment.findMany({
+    where: { courierId: courier.id, status: ShipmentStatus.COURIER_ASSIGNED },
+    take: limit,
+    skip,
+    orderBy: { [sortBy]: sortOrder },
+    select: {
+      id: true,
+      courierId: true,
+      customerId: true,
+      senderName: true,
+      originZone: { select: { name: true } },
+      originHub: { select: { name: true } },
+      destinationZone: { select: { name: true } },
+      destinationHub: { select: { name: true } },
+    },
+  });
+
+  const total = await prisma.shipment.count({
+    where: { courierId: courier.id, status: ShipmentStatus.COURIER_ASSIGNED },
+  });
+
+  return {
+    data: assignedShipments,
+    meta: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+    },
+  };
+};
+
 export const ShipmentServices = {
   createShipmentIntoDB,
   payShipment,
@@ -746,4 +806,5 @@ export const ShipmentServices = {
   getShipmentById,
   cancelShipment,
   assignCourier,
+  getAssignedShipments,
 };

@@ -112,6 +112,20 @@ const assignCourier = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+//* Get Assigned Shipments
+const getAssignedShipments = catchAsync(async (req: Request, res: Response) => {
+  const userId = req.user?.userId as string;
+
+  const result = await ShipmentServices.getAssignedShipments(req.query, userId);
+
+  sendResponse(res, {
+    success: true,
+    statusCode: httpStatus.OK,
+    message: "Assigned shipments fetched successfully.",
+    data: result,
+  });
+});
+
 export const ShipmentController = {
   createShipment,
   payShipment,
@@ -121,4 +135,5 @@ export const ShipmentController = {
   getShipmentById,
   cancelShipment,
   assignCourier,
+  getAssignedShipments,
 };
