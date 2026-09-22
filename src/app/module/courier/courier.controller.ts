@@ -74,10 +74,24 @@ const getCourierById = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+//* Get Courier Stats
+const getCourierStats = catchAsync(async (req: Request, res: Response) => {
+  const userId = req.user?.userId as string;
+
+  const result = await CourierServices.getCourierStats(userId);
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Courier stats fetched Successfully",
+    data: result,
+  });
+});
+
 export const CourierController = {
   applyAsCourier,
   verifyCourierEmail,
   reviewCourier,
   getAllCouriers,
   getCourierById,
+  getCourierStats,
 };

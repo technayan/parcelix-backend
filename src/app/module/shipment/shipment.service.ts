@@ -769,8 +769,16 @@ const getAssignedShipments = async (query: IQuery, userId: string) => {
       throw new AppError(httpStatus.NOT_FOUND, "Courier not found!");
     }
 
+    const andConditions: ShipmentWhereInput[] = [];
+
+    andConditions.push({ courierId: courier.id });
+
+    if (query.status) {
+      andConditions.push({ status: query.status });
+    }
+
     const assignedShipments = await tx.shipment.findMany({
-      where: { courierId: courier.id, status: ShipmentStatus.COURIER_ASSIGNED },
+      where: { AND: andConditions },
       take: limit,
       skip,
       orderBy: { [sortBy]: sortOrder },
@@ -788,7 +796,7 @@ const getAssignedShipments = async (query: IQuery, userId: string) => {
     });
 
     const total = await tx.shipment.count({
-      where: { courierId: courier.id, status: ShipmentStatus.COURIER_ASSIGNED },
+      where: { AND: andConditions },
     });
 
     return {

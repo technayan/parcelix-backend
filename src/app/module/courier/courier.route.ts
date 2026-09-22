@@ -27,6 +27,12 @@ router.post(
 
 router.get("/", auth(Role.ADMIN), CourierController.getAllCouriers);
 
-router.get("/:courierId", auth(Role.ADMIN), CourierController.getCourierById);
+router.get(
+  "/details/:courierId",
+  auth(Role.ADMIN),
+  CourierController.getCourierById,
+);
+
+router.get("/stats", auth(Role.COURIER), CourierController.getCourierStats);
 
 export const CourierRoutes = router;

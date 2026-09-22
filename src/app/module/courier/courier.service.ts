@@ -7,6 +7,7 @@ import path from "path";
 import {
   CourierVerificationStatus,
   Role,
+  ShipmentStatus,
 } from "../../../generated/prisma/enums";
 import type { CourierWhereInput } from "../../../generated/prisma/models";
 import config from "../../config";
@@ -408,10 +409,61 @@ const getCourierById = async (courierId: string) => {
   return courier;
 };
 
+//* Get Courier Earnings
+const getCourierStats = async (userId: string) => {
+  const transactionResult = await prisma.$transaction(async (tx) => {
+    const courier = await tx.courier.findUnique({
+      where: { userId },
+    });
+
+    if (!courier) {
+      throw new AppError(httpStatus.NOT_FOUND, "Courier not found!");
+    }
+
+    const [earnings, deliveredCount, returnedCount] = await Promise.all([
+      prisma.payment.aggregate({
+        _sum: {
+          courierEarning: true,
+        },
+        where: {
+          shipment: {
+            courierId: courier.id,
+            status: {
+              in: [ShipmentStatus.DELIVERED, ShipmentStatus.RETURNED],
+            },
+          },
+        },
+      }),
+
+      prisma.shipment.count({
+        where: {
+          courierId: courier.id,
+          status: ShipmentStatus.DELIVERED,
+        },
+      }),
+
+      prisma.shipment.count({
+        where: {
+          courierId: courier.id,
+          status: ShipmentStatus.RETURNED,
+        },
+      }),
+    ]);
+
+    return {
+      totalEarnings: earnings._sum.courierEarning ?? 0,
+      totalCompletedShipments: deliveredCount + returnedCount,
+    };
+  });
+
+  return transactionResult;
+};
+
 export const CourierServices = {
   applyAsCourier,
   verifyCourierEmail,
   reviewCourier,
   getAllCouriers,
   getCourierById,
+  getCourierStats,
 };
