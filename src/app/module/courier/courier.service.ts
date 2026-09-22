@@ -8,7 +8,9 @@ import {
   CourierVerificationStatus,
   Role,
 } from "../../../generated/prisma/enums";
+import type { CourierWhereInput } from "../../../generated/prisma/models";
 import config from "../../config";
+import type { IQuery } from "../../interfaces";
 import { cloudinary } from "../../lib/cloudinary";
 import { transporter } from "../../lib/nodemailer";
 import { prisma } from "../../lib/prisma";
@@ -324,8 +326,92 @@ const reviewCourier = async (
   return transactionResult;
 };
 
+//* Get All Couriers
+const getAllCouriers = async (query: IQuery) => {
+  const limit = query.limit ? Number(query.limit) : 10;
+  const page = query.page ? Number(query.page) : 1;
+  const skip = (page - 1) * limit;
+  const sortBy = query.sortBy ? query.sortBy : "createdAt";
+  const sortOrder = query.sortOrder ? query.sortOrder : "desc";
+
+  const andConditions: CourierWhereInput[] = [];
+
+  //Searching
+  if (query.searchTerm) {
+    andConditions.push({
+      OR: [
+        { user: { name: { contains: query.searchTerm, mode: "insensitive" } } },
+        {
+          user: { phone: { contains: query.searchTerm, mode: "insensitive" } },
+        },
+        {
+          user: { email: { contains: query.searchTerm, mode: "insensitive" } },
+        },
+        { address: { contains: query.searchTerm, mode: "insensitive" } },
+      ],
+    });
+  }
+
+  //filtering
+  if (query.availabilityStatus) {
+    andConditions.push({ availabilityStatus: query.availabilityStatus });
+  }
+
+  if (query.verificationStatus) {
+    andConditions.push({
+      verificationStatus: query.verificationStatus as CourierVerificationStatus,
+    });
+  }
+
+  andConditions.push({ user: { isDeleted: false } });
+
+  const couriers = await prisma.courier.findMany({
+    where: {
+      AND: andConditions.length > 0 ? andConditions : undefined,
+    },
+    select: {
+      id: true,
+      address: true,
+      availabilityStatus: true,
+      verificationStatus: true,
+      user: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          phone: true,
+          profilePhoto: true,
+        },
+      },
+    },
+    take: limit,
+    skip: skip,
+
+    orderBy: {
+      [sortBy]: sortOrder,
+    },
+  });
+
+  const total = await prisma.courier.count({
+    where: {
+      AND: andConditions,
+    },
+  });
+
+  return {
+    data: couriers,
+    meta: {
+      page: page,
+      limit: limit,
+      total: total,
+      totalPages: Math.ceil(total / limit),
+    },
+  };
+};
+
 export const CourierServices = {
   applyAsCourier,
   verifyCourierEmail,
   reviewCourier,
+  getAllCouriers,
 };
