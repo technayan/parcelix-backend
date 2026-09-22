@@ -29,4 +29,10 @@ router.get(
   ShipmentController.getShipmentById,
 );
 
+router.post(
+  "/cancel/:shipmentId",
+  auth(Role.CUSTOMER),
+  ShipmentController.cancelShipment,
+);
+
 export const ShipmentRoutes = router;

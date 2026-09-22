@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>Shipment Cancelled - Parcelix</title>
+
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        background-color: #f8fafc;
+        font-family: Inter, Arial, Helvetica, sans-serif;
+        color: #0f172a;
+      }
+
+      .wrapper {
+        width: 100%;
+        padding: 40px 15px;
+        box-sizing: border-box;
+      }
+
+      .container {
+        max-width: 600px;
+        margin: 0 auto;
+        background-color: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        overflow: hidden;
+      }
+
+      /* Header */
+
+      .header {
+        background-color: #0f172a;
+        padding: 28px 40px;
+        text-align: center;
+      }
+
+      .logo {
+        font-size: 28px;
+        font-weight: 700;
+        letter-spacing: -1px;
+        color: #ffffff;
+      }
+
+      .logo span {
+        color: #f97316;
+      }
+
+      .tagline {
+        margin-top: 6px;
+        color: #94a3b8;
+        font-size: 13px;
+      }
+
+      /* Content */
+
+      .content {
+        padding: 45px 40px;
+      }
+
+      .cancel-icon {
+        width: 64px;
+        height: 64px;
+        margin: 0 auto 25px;
+        background-color: #fef2f2;
+        border-radius: 50%;
+        text-align: center;
+        line-height: 64px;
+        font-size: 30px;
+        color: #ef4444;
+        font-weight: 700;
+      }
+
+      .title {
+        margin: 0;
+        text-align: center;
+        color: #0f172a;
+        font-size: 27px;
+        line-height: 1.3;
+        font-weight: 700;
+      }
+
+      .subtitle {
+        margin: 10px 0 30px;
+        text-align: center;
+        color: #64748b;
+        font-size: 15px;
+        line-height: 1.6;
+      }
+
+      .greeting {
+        color: #334155;
+        font-size: 15px;
+        line-height: 1.7;
+      }
+
+      .message {
+        color: #64748b;
+        font-size: 14px;
+        line-height: 1.7;
+      }
+
+      /* Cancellation Box */
+
+      .cancel-box {
+        margin: 28px 0;
+        padding: 22px;
+        background-color: #fef2f2;
+        border: 1px solid #fecaca;
+        border-radius: 12px;
+      }
+
+      .cancel-title {
+        margin: 0 0 8px;
+        color: #b91c1c;
+        font-size: 16px;
+        font-weight: 700;
+      }
+
+      .cancel-text {
+        margin: 0;
+        color: #991b1b;
+        font-size: 13px;
+        line-height: 1.6;
+      }
+
+      /* Shipment Details */
+
+      .details {
+        margin: 28px 0;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        overflow: hidden;
+      }
+
+      .details-header {
+        padding: 12px 16px;
+        background-color: #f8fafc;
+        color: #0f172a;
+        font-size: 14px;
+        font-weight: 700;
+      }
+
+      .details-row {
+        padding: 11px 16px;
+        border-top: 1px solid #e2e8f0;
+        font-size: 13px;
+      }
+
+      .details-label {
+        color: #64748b;
+      }
+
+      .details-value {
+        color: #0f172a;
+        font-weight: 600;
+      }
+
+      .status-cancelled {
+        color: #dc2626;
+        font-weight: 700;
+      }
+
+      /* Refund Box */
+
+      .refund-box {
+        margin: 25px 0;
+        padding: 22px;
+        background-color: #fff7ed;
+        border: 1px solid #fed7aa;
+        border-radius: 12px;
+      }
+
+      .refund-title {
+        margin: 0 0 8px;
+        color: #c2410c;
+        font-size: 16px;
+        font-weight: 700;
+      }
+
+      .refund-text {
+        margin: 0;
+        color: #9a3412;
+        font-size: 13px;
+        line-height: 1.6;
+      }
+
+      /* Closing */
+
+      .closing {
+        margin-top: 28px;
+        color: #334155;
+        font-size: 14px;
+        line-height: 1.7;
+      }
+
+      /* Footer */
+
+      .footer {
+        padding: 25px 40px;
+        background-color: #f8fafc;
+        border-top: 1px solid #e2e8f0;
+        text-align: center;
+      }
+
+      .footer-text {
+        margin: 0;
+        color: #94a3b8;
+        font-size: 12px;
+        line-height: 1.6;
+      }
+
+      .footer-brand {
+        margin-top: 8px;
+        color: #64748b;
+        font-size: 12px;
+        font-weight: 600;
+      }
+
+      @media only screen and (max-width: 600px) {
+        .wrapper {
+          padding: 20px 10px;
+        }
+
+        .header,
+        .content,
+        .footer {
+          padding-left: 25px;
+          padding-right: 25px;
+        }
+
+        .title {
+          font-size: 24px;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="wrapper">
+      <div class="container">
+        <!-- Header -->
+
+        <div class="header">
+          <div class="logo">Parcel<span>ix</span></div>
+        </div>
+
+        <!-- Content -->
+
+        <div class="content">
+          <!-- Cancel Icon -->
+
+          <div class="cancel-icon">×</div>
+
+          <h1 class="title">Shipment Cancelled</h1>
+
+          <p class="subtitle">Your shipment has been successfully cancelled.</p>
+
+          <p class="greeting">Hi <strong><%= name %></strong>,</p>
+
+          <p class="message">
+            This email is to confirm that you have successfully cancelled your
+            Parcelix shipment. The shipment will no longer proceed through the
+            Parcelix delivery process.
+          </p>
+
+          <!-- Cancellation Status -->
+
+          <div class="cancel-box">
+            <p class="cancel-title">✓ Cancellation Confirmed</p>
+
+            <p class="cancel-text">
+              Your shipment cancellation request has been processed
+              successfully. The shipment status has been updated to
+              <strong>CANCELLED</strong>.
+            </p>
+          </div>
+
+          <!-- Shipment Details -->
+
+          <div class="details">
+            <div class="details-header">Shipment Information</div>
+
+            <div class="details-row">
+              <span class="details-label"> Tracking ID: </span>
+
+              <span class="details-value"> <%= trackingId %> </span>
+            </div>
+
+            <div class="details-row">
+              <span class="details-label"> Shipment ID: </span>
+
+              <span class="details-value"> <%= shipmentId %> </span>
+            </div>
+
+            <div class="details-row">
+              <span class="details-label"> Amount Paid: </span>
+
+              <span class="details-value"> BDT <%= amount %> </span>
+            </div>
+
+            <div class="details-row">
+              <span class="details-label"> Status: </span>
+
+              <span class="status-cancelled"> CANCELLED </span>
+            </div>
+          </div>
+
+          <!-- Refund Information -->
+
+          <div class="refund-box">
+            <p class="refund-title">Payment & Refund Information</p>
+
+            <p class="refund-text">
+              If your payment has already been completed, any applicable refund
+              will be processed according to Parcelix's refund policy and
+              payment provider processing time.
+            </p>
+          </div>
+
+          <p class="closing">
+            If you did not request this cancellation or believe this was
+            cancelled by mistake, please contact Parcelix support as soon as
+            possible.
+          </p>
+
+          <p class="closing">
+            Thank you for choosing <strong>Parcelix</strong>. We hope to serve
+            you again in the future.
+          </p>
+        </div>
+
+        <!-- Footer -->
+
+        <div class="footer">
+          <p class="footer-text">
+            If you have any questions about your shipment, cancellation, or
+            refund, please contact Parcelix support.
+          </p>
+
+          <p class="footer-brand">
+            © <%= new Date().getFullYear() %> Parcelix. All rights reserved.
+          </p>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

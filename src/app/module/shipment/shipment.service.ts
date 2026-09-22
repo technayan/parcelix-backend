@@ -387,6 +387,142 @@ const payShipmentCallback = async (query: Record<string, any>) => {
   return transactionResult;
 };
 
+//* Cancel Shipment
+const cancelShipment = async (shipmentId: string, user: IRequestUser) => {
+  const transactionResult = await prisma.$transaction(
+    async (tx) => {
+      const existingShipment = await tx.shipment.findUnique({
+        where: {
+          id: shipmentId,
+          customer: {
+            userId: user.userId,
+          },
+        },
+        include: {
+          payment: true,
+        },
+      });
+
+      if (!existingShipment) {
+        throw new AppError(httpStatus.NOT_FOUND, "Shipment not found!");
+      }
+
+      if (existingShipment.status === ShipmentStatus.CANCELLED) {
+        throw new AppError(
+          httpStatus.CONFLICT,
+          "Shipment is already cancelled.",
+        );
+      }
+
+      const cancellable =
+        existingShipment.status === ShipmentStatus.PENDING_PAYMENT ||
+        existingShipment.status === ShipmentStatus.PAID ||
+        existingShipment.status === ShipmentStatus.PICKUP_REQUESTED ||
+        existingShipment.status === ShipmentStatus.COURIER_ASSIGNED;
+
+      if (!cancellable) {
+        throw new AppError(
+          httpStatus.BAD_REQUEST,
+          `Shipment is ${existingShipment.status} and cannot be cancelled.`,
+        );
+      }
+
+      //* Update Shipment
+      const updatedShipment = await tx.shipment.update({
+        where: { id: shipmentId },
+        data: {
+          status: ShipmentStatus.CANCELLED,
+        },
+      });
+
+      const isRefundable =
+        existingShipment.status !== ShipmentStatus.PENDING_PAYMENT;
+
+      if (isRefundable) {
+        //* Refund Payment
+        const bkashIdToken = await getBkashIdToken();
+
+        if (!bkashIdToken) {
+          throw new AppError(
+            httpStatus.INTERNAL_SERVER_ERROR,
+            "Bkash IdToken not found!",
+          );
+        }
+
+        const bkashRefundResponse = await fetch(
+          `${config.bkash_base_url}/tokenized/checkout/payment/refund`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              accept: "application/json",
+              authorization: bkashIdToken,
+              "X-App-Key": config.bkash_app_key,
+            },
+            body: JSON.stringify({
+              paymentID: existingShipment.payment?.bkashPaymentId,
+              trxID: existingShipment.payment?.bkashTrxId,
+              amount: existingShipment.payment?.totalAmount.toString(),
+              sku: "Shipment Cancellation",
+              reason: "Customer cancelled the shipment",
+            }),
+          },
+        );
+
+        const bkashRefundResult = await bkashRefundResponse.json();
+
+        //* Update Payment
+        await tx.payment.update({
+          where: { shipmentId: existingShipment.id },
+          data: {
+            status: PaymentStatus.REFUNDED,
+            refundTrxId: bkashRefundResult.refundTrxID,
+            refundAmount: bkashRefundResult.amount.toString(),
+            refundedAt: bkashRefundResult.completedTime,
+            refundReason: "Customer cancelled the shipment",
+            getwayResponse: bkashRefundResult,
+          },
+        });
+      }
+
+      const newPaymentInfo = await tx.payment.findUnique({
+        where: { shipmentId },
+      });
+
+      const templatePath = path.join(
+        process.cwd(),
+        "src/app/templates/cancel-shipment.ejs",
+      );
+
+      const html = await ejs.renderFile(templatePath, {
+        name: user.name,
+        trackingId: existingShipment.trackingId,
+        shipmentId,
+        amount: newPaymentInfo?.totalAmount,
+        paymentGateway: newPaymentInfo?.paymentGateway,
+      });
+
+      await transporter.sendMail({
+        from: config.email_sender,
+        to: user.email,
+        subject: "Shipment Cancelled - Parcelix",
+        html,
+      });
+
+      return {
+        updatedShipment,
+        newPaymentInfo,
+      };
+    },
+    {
+      maxWait: 10000,
+      timeout: 30000,
+    },
+  );
+
+  return transactionResult;
+};
+
 //* Request for Pickup
 const requestPickup = async (
   payload: IShipmentStatusPayload,
@@ -510,11 +646,14 @@ const getShipmentById = async (shipmentId: string, user: IRequestUser) => {
       customer: {
         select: {
           id: true,
-          user: { select: { name: true, email: true, phone: true } },
+          user: { select: { id: true, name: true, email: true, phone: true } },
         },
       },
       courier: {
-        select: { id: true, user: { select: { name: true, email: true } } },
+        select: {
+          id: true,
+          user: { select: { id: true, name: true, email: true, phone: true } },
+        },
       },
       payment: {
         select: { id: true, bkashTrxId: true, totalAmount: true, status: true },
@@ -527,7 +666,7 @@ const getShipmentById = async (shipmentId: string, user: IRequestUser) => {
   }
 
   if (user.role === Role.CUSTOMER) {
-    if (shipment.customer.user.email !== user.email) {
+    if (shipment.customer.user.id !== user.userId) {
       throw new AppError(
         httpStatus.FORBIDDEN,
         "You have no permission to access this resource.",
@@ -536,7 +675,7 @@ const getShipmentById = async (shipmentId: string, user: IRequestUser) => {
   }
 
   if (user.role === Role.COURIER) {
-    if (shipment.courier?.user.email !== user.email) {
+    if (shipment.courier?.user.id !== user.userId) {
       throw new AppError(
         httpStatus.FORBIDDEN,
         "You have no permission to access this resource.",
@@ -554,4 +693,5 @@ export const ShipmentServices = {
   requestPickup,
   getAllShipments,
   getShipmentById,
+  cancelShipment,
 };

@@ -40,6 +40,21 @@ const payShipmentCallback = catchAsync(async (req: Request, res: Response) => {
   res.redirect(redirectUrl);
 });
 
+//* Cancel Shipment
+const cancelShipment = catchAsync(async (req: Request, res: Response) => {
+  const shipmentId = req.params.shipmentId as string;
+  const user = req.user;
+
+  const result = await ShipmentServices.cancelShipment(shipmentId, user!);
+
+  sendResponse(res, {
+    success: true,
+    statusCode: httpStatus.OK,
+    message: "Shipment cancelled successfully.",
+    data: result,
+  });
+});
+
 //* Request for Pickup
 const requestPickup = catchAsync(async (req: Request, res: Response) => {
   const payload = req.body;
@@ -90,4 +105,5 @@ export const ShipmentController = {
   requestPickup,
   getAllShipments,
   getShipmentById,
+  cancelShipment,
 };
