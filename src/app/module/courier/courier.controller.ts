@@ -87,6 +87,25 @@ const getCourierStats = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+//* Update Courier Availability Status
+const updateCourierAvailability = catchAsync(
+  async (req: Request, res: Response) => {
+    const userId = req.user?.userId as string;
+    const payload = req.body;
+
+    const result = await CourierServices.updateCourierAvailability(
+      userId,
+      payload,
+    );
+    sendResponse(res, {
+      statusCode: httpStatus.OK,
+      success: true,
+      message: "Courier availability status updated Successfully",
+      data: result,
+    });
+  },
+);
+
 export const CourierController = {
   applyAsCourier,
   verifyCourierEmail,
@@ -94,4 +113,5 @@ export const CourierController = {
   getAllCouriers,
   getCourierById,
   getCourierStats,
+  updateCourierAvailability,
 };

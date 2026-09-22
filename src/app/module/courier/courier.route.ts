@@ -35,4 +35,10 @@ router.get(
 
 router.get("/stats", auth(Role.COURIER), CourierController.getCourierStats);
 
+router.patch(
+  "/availability-status",
+  auth(Role.COURIER),
+  CourierController.updateCourierAvailability,
+);
+
 export const CourierRoutes = router;

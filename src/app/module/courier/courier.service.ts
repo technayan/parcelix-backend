@@ -20,6 +20,7 @@ import { AppError } from "../../utils/AppError";
 import type {
   IApplyAsCourierPayload,
   IApproveCourierPayload,
+  IUpdateCourierAvailabilityPayload,
   IVerifyCourierEmailPayload,
 } from "./courier.interface";
 
@@ -459,6 +460,29 @@ const getCourierStats = async (userId: string) => {
   return transactionResult;
 };
 
+//* Update Courier Availability Status
+const updateCourierAvailability = async (
+  userId: string,
+  payload: IUpdateCourierAvailabilityPayload,
+) => {
+  const courier = await prisma.courier.findUnique({
+    where: { userId },
+  });
+
+  if (!courier) {
+    throw new AppError(httpStatus.NOT_FOUND, "Courier not found!");
+  }
+
+  const updatedCourier = await prisma.courier.update({
+    where: { id: courier.id },
+    data: {
+      availabilityStatus: payload.status,
+    },
+  });
+
+  return updatedCourier;
+};
+
 export const CourierServices = {
   applyAsCourier,
   verifyCourierEmail,
@@ -466,4 +490,5 @@ export const CourierServices = {
   getAllCouriers,
   getCourierById,
   getCourierStats,
+  updateCourierAvailability,
 };
