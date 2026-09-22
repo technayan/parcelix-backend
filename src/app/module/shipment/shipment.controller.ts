@@ -98,6 +98,20 @@ const getShipmentById = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+//* Assign Courier
+const assignCourier = catchAsync(async (req: Request, res: Response) => {
+  const payload = req.body;
+
+  const result = await ShipmentServices.assignCourier(payload);
+
+  sendResponse(res, {
+    success: true,
+    statusCode: httpStatus.OK,
+    message: "Courier assigned successfully.",
+    data: result,
+  });
+});
+
 export const ShipmentController = {
   createShipment,
   payShipment,
@@ -106,4 +120,5 @@ export const ShipmentController = {
   getAllShipments,
   getShipmentById,
   cancelShipment,
+  assignCourier,
 };

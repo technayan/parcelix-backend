@@ -35,4 +35,10 @@ router.post(
   ShipmentController.cancelShipment,
 );
 
+router.post(
+  "/assign-courier",
+  auth(Role.ADMIN),
+  ShipmentController.assignCourier,
+);
+
 export const ShipmentRoutes = router;

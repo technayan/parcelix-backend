@@ -3,6 +3,8 @@ import ejs from "ejs";
 import httpStatus from "http-status";
 import path from "path";
 import {
+  CourierAvailabilityStatus,
+  CourierVerificationStatus,
   PaymentStatus,
   Role,
   ShipmentStatus,
@@ -21,6 +23,7 @@ import { generateInvoiceNumber } from "../../utils/getInvoiceNumber";
 import { generateTrackingId } from "../../utils/getTrackingId";
 import type { IRequestUser } from "../auth/auth.interface";
 import type {
+  IAssignCourierPayload,
   ICreateShipmentPayload,
   IPayShipmentPayload,
   IShipmentStatusPayload,
@@ -499,7 +502,6 @@ const cancelShipment = async (shipmentId: string, user: IRequestUser) => {
         trackingId: existingShipment.trackingId,
         shipmentId,
         amount: newPaymentInfo?.totalAmount,
-        paymentGateway: newPaymentInfo?.paymentGateway,
       });
 
       await transporter.sendMail({
@@ -686,6 +688,55 @@ const getShipmentById = async (shipmentId: string, user: IRequestUser) => {
   return shipment;
 };
 
+//* Assign Courier
+const assignCourier = async (payload: IAssignCourierPayload) => {
+  const { shipmentId, courierId } = payload;
+  const transactionResult = await prisma.$transaction(async (tx) => {
+    const shipment = await tx.shipment.findUnique({
+      where: { id: shipmentId },
+    });
+
+    if (!shipment) {
+      throw new AppError(httpStatus.NOT_FOUND, "Shipment not found!");
+    }
+
+    if (shipment.status !== ShipmentStatus.PICKUP_REQUESTED) {
+      throw new AppError(
+        httpStatus.BAD_REQUEST,
+        "No pickup request were created.",
+      );
+    }
+
+    const courier = await tx.courier.findUnique({
+      where: { id: courierId },
+    });
+
+    if (!courier) {
+      throw new AppError(httpStatus.NOT_FOUND, "Courier not found!");
+    }
+
+    if (courier.verificationStatus !== CourierVerificationStatus.APPROVED) {
+      throw new AppError(httpStatus.BAD_REQUEST, "Courier is not verified.");
+    }
+
+    if (courier.availabilityStatus !== CourierAvailabilityStatus.AVAILABLE) {
+      throw new AppError(httpStatus.BAD_REQUEST, "Courier is not available.");
+    }
+
+    const updatedShipment = tx.shipment.update({
+      where: { id: shipmentId },
+      data: {
+        courierId,
+        status: ShipmentStatus.COURIER_ASSIGNED,
+      },
+    });
+
+    return updatedShipment;
+  });
+
+  return transactionResult;
+};
+
 export const ShipmentServices = {
   createShipmentIntoDB,
   payShipment,
@@ -694,4 +745,5 @@ export const ShipmentServices = {
   getAllShipments,
   getShipmentById,
   cancelShipment,
+  assignCourier,
 };

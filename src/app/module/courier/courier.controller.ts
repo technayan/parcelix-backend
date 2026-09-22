@@ -37,9 +37,8 @@ const verifyCourierEmail = catchAsync(async (req: Request, res: Response) => {
 //* Review Courier
 const reviewCourier = catchAsync(async (req: Request, res: Response) => {
   const payload = req.body;
-  const userId = req.user?.userId as string;
 
-  const result = await CourierServices.reviewCourier(payload, userId);
+  const result = await CourierServices.reviewCourier(payload);
 
   sendResponse(res, {
     statusCode: httpStatus.OK,

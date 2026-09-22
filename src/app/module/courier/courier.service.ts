@@ -186,27 +186,8 @@ const verifyCourierEmail = async (payload: IVerifyCourierEmailPayload) => {
 };
 
 //* Review Courier
-const reviewCourier = async (
-  payload: IApproveCourierPayload,
-  userId: string,
-) => {
+const reviewCourier = async (payload: IApproveCourierPayload) => {
   const transactionResult = await prisma.$transaction(async (tx) => {
-    const reviewer = await tx.user.findUnique({
-      where: { id: userId },
-      omit: { password: true },
-    });
-
-    if (!reviewer) {
-      throw new AppError(httpStatus.NOT_FOUND, "Reviewer not found!");
-    }
-
-    if (reviewer.role !== Role.ADMIN) {
-      throw new AppError(
-        httpStatus.FORBIDDEN,
-        "You have no permission to review any applications.",
-      );
-    }
-
     const { courierId, verificationStatus, rejectionReason } = payload;
 
     const existingCourier = await tx.courier.findUnique({

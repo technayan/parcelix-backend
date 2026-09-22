@@ -39,3 +39,8 @@ export interface IGenerateInvoicePayload {
 export interface IShipmentStatusPayload {
   shipmentId: string;
 }
+
+export interface IAssignCourierPayload {
+  shipmentId: string;
+  courierId: string;
+}
