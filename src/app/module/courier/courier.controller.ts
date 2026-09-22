@@ -62,9 +62,23 @@ const getAllCouriers = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+//* Get Courier by ID
+const getCourierById = catchAsync(async (req: Request, res: Response) => {
+  const courierId = req.params.courierId as string;
+
+  const result = await CourierServices.getCourierById(courierId);
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Courier details fetched Successfully",
+    data: result,
+  });
+});
+
 export const CourierController = {
   applyAsCourier,
   verifyCourierEmail,
   reviewCourier,
   getAllCouriers,
+  getCourierById,
 };

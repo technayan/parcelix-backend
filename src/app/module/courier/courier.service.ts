@@ -409,9 +409,28 @@ const getAllCouriers = async (query: IQuery) => {
   };
 };
 
+//* Get Courier By ID
+const getCourierById = async (courierId: string) => {
+  const courier = await prisma.courier.findUnique({
+    where: {
+      id: courierId,
+    },
+    include: {
+      user: { omit: { password: true } },
+    },
+  });
+
+  if (!courier) {
+    throw new AppError(httpStatus.NOT_FOUND, "Courier Not Found");
+  }
+
+  return courier;
+};
+
 export const CourierServices = {
   applyAsCourier,
   verifyCourierEmail,
   reviewCourier,
   getAllCouriers,
+  getCourierById,
 };
