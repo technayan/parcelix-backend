@@ -431,13 +431,23 @@ const cancelShipment = async (shipmentId: string, user: IRequestUser) => {
         );
       }
 
-      //* Update Shipment
+      // Update Shipment
       const updatedShipment = await tx.shipment.update({
         where: { id: shipmentId },
         data: {
           status: ShipmentStatus.CANCELLED,
         },
       });
+
+      // Track shipment
+      if (existingShipment.status === ShipmentStatus.PAID) {
+        await tx.trackingShipment.create({
+          data: {
+            shipmentId,
+            status: TrackingShipmentStatus.CANCELLED,
+          },
+        });
+      }
 
       const isRefundable =
         existingShipment.status !== ShipmentStatus.PENDING_PAYMENT;
@@ -1076,6 +1086,7 @@ const getMyShipments = async (query: IQuery, userId: string) => {
       orderBy: { [sortBy]: sortOrder },
       select: {
         id: true,
+        trackingId: true,
         courierId: true,
         customerId: true,
         senderName: true,
