@@ -8,27 +8,47 @@ import { authValidation } from "./auth.validation";
 const router = Router();
 
 router.post(
-	"/register",
-	validateRequest(authValidation.RegistrationZodSchema),
-	AuthController.registerCustomer,
+  "/register",
+  validateRequest(authValidation.RegisterCustomerZodSchema),
+  AuthController.registerCustomer,
 );
 
-router.post("/email-verification", AuthController.verifyEmail);
+router.post(
+  "/email-verification",
+  validateRequest(authValidation.EmailVerificationZodSchema),
+  AuthController.verifyEmail,
+);
 
-router.post("/login", AuthController.login);
+router.post(
+  "/login",
+  validateRequest(authValidation.LoginZodSchema),
+  AuthController.login,
+);
 
 router.get(
-	"/profile",
-	auth(Role.ADMIN, Role.COURIER, Role.CUSTOMER),
-	AuthController.getProfile,
+  "/profile",
+  auth(Role.ADMIN, Role.COURIER, Role.CUSTOMER),
+  AuthController.getProfile,
 );
 
 router.post("/refresh-token", AuthController.refreshToken);
 
-router.post("/forgot-password", AuthController.forgotPassword);
+router.post(
+  "/forgot-password",
+  validateRequest(authValidation.ForgotPasswordZodSchema),
+  AuthController.forgotPassword,
+);
 
-router.post("/reset-password", AuthController.resetPassword);
+router.post(
+  "/reset-password",
+  validateRequest(authValidation.ResetPasswordZodSchema),
+  AuthController.resetPassword,
+);
 
-router.post("/google", AuthController.googleLogin);
+router.post(
+  "/google",
+  validateRequest(authValidation.GoogleLoginZodSchema),
+  AuthController.googleLogin,
+);
 
 export const AuthRoutes = router;

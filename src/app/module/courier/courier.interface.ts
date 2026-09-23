@@ -15,7 +15,7 @@ export interface IVerifyCourierEmailPayload {
   otp: string;
 }
 
-export interface IApproveCourierPayload {
+export interface IReviewCourierPayload {
   courierId: string;
   verificationStatus: CourierVerificationStatus;
   rejectionReason?: string;

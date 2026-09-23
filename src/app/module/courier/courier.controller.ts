@@ -1,8 +1,10 @@
 import type { Request, Response } from "express";
 import httpStatus from "http-status";
+import { AppError } from "../../utils/AppError";
 import { catchAsync } from "../../utils/catchAsync";
 import { sendResponse } from "../../utils/sendResponse";
 import { CourierServices } from "./courier.service";
+import { courierValidation } from "./courier.validation";
 
 //* Apply as Courier
 const applyAsCourier = catchAsync(async (req: Request, res: Response) => {
@@ -10,7 +12,20 @@ const applyAsCourier = catchAsync(async (req: Request, res: Response) => {
   const resume = files?.["resume"] ? files["resume"][0] : null;
   const payload = JSON.parse(req?.body?.data);
 
-  const result = await CourierServices.applyAsCourier(payload, resume);
+  const validationResult =
+    courierValidation.ApplyAsCourierZodSchema.safeParse(payload);
+
+  if (!validationResult.success) {
+    throw new AppError(
+      httpStatus.BAD_REQUEST,
+      validationResult.error.issues[0].message,
+    );
+  }
+
+  const result = await CourierServices.applyAsCourier(
+    validationResult.data,
+    resume,
+  );
 
   sendResponse(res, {
     statusCode: httpStatus.OK,

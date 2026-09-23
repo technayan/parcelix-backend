@@ -19,7 +19,7 @@ import { redisClient } from "../../lib/redis";
 import { AppError } from "../../utils/AppError";
 import type {
   IApplyAsCourierPayload,
-  IApproveCourierPayload,
+  IReviewCourierPayload,
   IUpdateCourierAvailabilityPayload,
   IVerifyCourierEmailPayload,
 } from "./courier.interface";
@@ -188,7 +188,7 @@ const verifyCourierEmail = async (payload: IVerifyCourierEmailPayload) => {
 };
 
 //* Review Courier
-const reviewCourier = async (payload: IApproveCourierPayload) => {
+const reviewCourier = async (payload: IReviewCourierPayload) => {
   const transactionResult = await prisma.$transaction(async (tx) => {
     const { courierId, verificationStatus, rejectionReason } = payload;
 

@@ -1,15 +1,23 @@
 import { Router } from "express";
 import { Role } from "../../../generated/prisma/enums";
 import { auth } from "../../middleware/checkAuth";
+import { validateRequest } from "../../middleware/validationRequest";
 import { ShipmentController } from "./shipment.controller";
+import { shipmentValidation } from "./shipment.validation";
 
 const router = Router();
 
-router.post("/", auth(Role.CUSTOMER), ShipmentController.createShipment);
+router.post(
+  "/",
+  auth(Role.CUSTOMER),
+  validateRequest(shipmentValidation.CreateShipmentZodSchema),
+  ShipmentController.createShipment,
+);
 
 router.post(
   "/pay-shipment",
   auth(Role.CUSTOMER),
+  validateRequest(shipmentValidation.PayShipmentZodSchema),
   ShipmentController.payShipment,
 );
 
@@ -18,6 +26,7 @@ router.get("/payment/callback", ShipmentController.payShipmentCallback);
 router.patch(
   "/request-pickup",
   auth(Role.CUSTOMER),
+  validateRequest(shipmentValidation.ShipmentStatusZodSchema),
   ShipmentController.requestPickup,
 );
 
@@ -29,7 +38,7 @@ router.get(
   ShipmentController.getShipmentById,
 );
 
-router.post(
+router.patch(
   "/cancel/:shipmentId",
   auth(Role.CUSTOMER),
   ShipmentController.cancelShipment,
@@ -38,6 +47,7 @@ router.post(
 router.patch(
   "/assign-courier/:shipmentId",
   auth(Role.ADMIN),
+  validateRequest(shipmentValidation.AssignCourierZodSchema),
   ShipmentController.assignCourier,
 );
 
@@ -50,6 +60,7 @@ router.get(
 router.patch(
   "/update-status/:shipmentId",
   auth(Role.COURIER),
+  validateRequest(shipmentValidation.UpdateShipmentStatusZodSchema),
   ShipmentController.updateShipmentStatus,
 );
 
