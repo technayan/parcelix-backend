@@ -11,11 +11,13 @@ import { globalErrorHandler } from "./app/middleware/globalErrorHandler";
 import { notFound } from "./app/middleware/notFound";
 import { AuthRoutes } from "./app/module/auth/auth.route";
 import { CourierRoutes } from "./app/module/courier/courier.route";
+import { HubRoutes } from "./app/module/hub/hub.route";
 import { PaymentRoutes } from "./app/module/payment/payment.route";
 import { ShipmentRoutes } from "./app/module/shipment/shipment.route";
 import { StatsRoutes } from "./app/module/stats/stats.route";
 import { TrackingRoutes } from "./app/module/tracking/tracking.route";
 import { UserRoutes } from "./app/module/user/user.route";
+import { ZoneRoutes } from "./app/module/zone/zone.route";
 
 const app: Application = express();
 
@@ -40,6 +42,8 @@ app.use("/api/v1/shipments", ShipmentRoutes);
 app.use("/api/v1/payments", PaymentRoutes);
 app.use("/api/v1/trackings", TrackingRoutes);
 app.use("/api/v1/stats", StatsRoutes);
+app.use("/api/v1/zones", ZoneRoutes);
+app.use("/api/v1/hubs", HubRoutes);
 
 // Basic route
 app.get("/", async (req: Request, res: Response) => {
