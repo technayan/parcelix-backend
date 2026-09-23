@@ -34,7 +34,21 @@ const getPaymentById = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+//* Get All Payments (Admin)
+const getAllPayments = catchAsync(async (req: Request, res: Response) => {
+  const { data, meta } = await PaymentServices.getAllPayments(req.query);
+
+  sendResponse(res, {
+    success: true,
+    statusCode: httpStatus.OK,
+    message: "Payments fetched successfully.",
+    data: data,
+    meta: meta,
+  });
+});
+
 export const PaymentController = {
   getMyPayments,
   getPaymentById,
+  getAllPayments,
 };

@@ -1050,6 +1050,21 @@ const getMyShipments = async (query: IQuery, userId: string) => {
 
     andConditions.push({ customerId: customer.id });
 
+    if (query.searchTerm) {
+      andConditions.push({
+        OR: [
+          { description: { contains: query.searchTerm, mode: "insensitive" } },
+          { senderName: { contains: query.searchTerm, mode: "insensitive" } },
+          { receiverName: { contains: query.searchTerm, mode: "insensitive" } },
+          { senderPhone: { contains: query.searchTerm, mode: "insensitive" } },
+          {
+            receiverPhone: { contains: query.searchTerm, mode: "insensitive" },
+          },
+          { trackingId: { contains: query.searchTerm, mode: "insensitive" } },
+        ],
+      });
+    }
+
     if (query.status) {
       andConditions.push({ status: query.status });
     }
