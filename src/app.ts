@@ -13,6 +13,7 @@ import { AuthRoutes } from "./app/module/auth/auth.route";
 import { CourierRoutes } from "./app/module/courier/courier.route";
 import { HubRoutes } from "./app/module/hub/hub.route";
 import { PaymentRoutes } from "./app/module/payment/payment.route";
+import { PricingRoutes } from "./app/module/pricing/pricing.route";
 import { ShipmentRoutes } from "./app/module/shipment/shipment.route";
 import { StatsRoutes } from "./app/module/stats/stats.route";
 import { TrackingRoutes } from "./app/module/tracking/tracking.route";
@@ -44,6 +45,7 @@ app.use("/api/v1/trackings", TrackingRoutes);
 app.use("/api/v1/stats", StatsRoutes);
 app.use("/api/v1/zones", ZoneRoutes);
 app.use("/api/v1/hubs", HubRoutes);
+app.use("/api/v1/pricings", PricingRoutes);
 
 // Basic route
 app.get("/", async (req: Request, res: Response) => {
