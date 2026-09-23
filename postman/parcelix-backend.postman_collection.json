@@ -1,0 +1,1011 @@
+{
+  "info": {
+    "_postman_id": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
+    "name": "Parcelix Backend",
+    "description": "Complete API collection for the Parcelix Backend (Express + Prisma).\n\n**Base URL:** `{{base}}` = `http://localhost:5000/api/v1`\n\n**Auth:** Most protected endpoints require `Authorization: Bearer {{accessToken}}`. Get a token via `Auth > Login` (test accounts are seeded on server start):\n- Admin: `test.admin@gmail.com` / `testAdmin@123456`\n- Courier: `test.courier@gmail.com` / `testCourier@123456`\n\nLogin responses automatically save `accessToken` / `refreshToken` to collection variables. Create/update responses also capture entity IDs (zoneId, hubId, etc.).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base", "value": "http://localhost:5000/api/v1" },
+    { "key": "accessToken", "value": "" },
+    { "key": "refreshToken", "value": "" },
+    { "key": "userId", "value": "" },
+    { "key": "courierId", "value": "" },
+    { "key": "zoneId", "value": "" },
+    { "key": "hubId", "value": "" },
+    { "key": "pricingId", "value": "" },
+    { "key": "shipmentId", "value": "" },
+    { "key": "paymentId", "value": "" },
+    { "key": "trackingId", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register (Customer)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"John Doe\",\n  \"email\": \"john.doe@example.com\",\n  \"password\": \"Pass@123456\",\n  \"phone\": \"01712345678\",\n  \"address\": \"123 Mirpur Road, Dhaka\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base}}/auth/register",
+              "host": ["{{base}}"],
+              "path": ["auth", "register"]
+            },
+            "description": "Registers a customer and sends a 6-digit OTP to the email (Redis, 5 min). Does not create the DB record until email verification.\n\npassword: min 6, needs uppercase + lowercase + digit + special char.\nphone: Bangladeshi format `01XXXXXXXXX` or `+8801XXXXXXXXX` (optional)."
+          }
+        },
+        {
+          "name": "Email Verification (OTP)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"john.doe@example.com\",\n  \"otp\": \"123456\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base}}/auth/email-verification",
+              "host": ["{{base}}"],
+              "path": ["auth", "email-verification"]
+            },
+            "description": "Verifies the OTP from registration and creates the customer account. Returns 201 with `data: { user, customer }`."
+          }
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "if (body?.data?.accessToken) {",
+                  "    pm.collectionVariables.set('accessToken', body.data.accessToken);",
+                  "}",
+                  "if (body?.data?.refreshToken) {",
+                  "    pm.collectionVariables.set('refreshToken', body.data.refreshToken);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test.admin@gmail.com\",\n  \"password\": \"testAdmin@123456\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base}}/auth/login",
+              "host": ["{{base}}"],
+              "path": ["auth", "login"]
+            },
+            "description": "Logs in with email + password. Sets httpOnly cookies AND returns tokens. **Auto-saves `accessToken` and `refreshToken` to collection variables.**\n\nSeeded accounts:\n- Admin: `test.admin@gmail.com` / `testAdmin@123456`\n- Courier: `test.courier@gmail.com` / `testCourier@123456`"
+          }
+        },
+        {
+          "name": "Get Profile",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": {
+              "raw": "{{base}}/auth/profile",
+              "host": ["{{base}}"],
+              "path": ["auth", "profile"]
+            },
+            "description": "Returns the logged-in user's profile (any role)."
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "", "options": { "raw": { "language": "json" } } },
+            "url": {
+              "raw": "{{base}}/auth/refresh-token",
+              "host": ["{{base}}"],
+              "path": ["auth", "refresh-token"]
+            },
+            "description": "Issues new access + refresh tokens. Reads the `refreshToken` from the **cookie** (not body). Enable cookie handling in Postman, or test this flow in a browser context."
+          }
+        },
+        {
+          "name": "Forgot Password",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"john.doe@example.com\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base}}/auth/forgot-password",
+              "host": ["{{base}}"],
+              "path": ["auth", "forgot-password"]
+            },
+            "description": "Sends a password-reset OTP to the email (Redis, 5 min)."
+          }
+        },
+        {
+          "name": "Reset Password",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"john.doe@example.com\",\n  \"otp\": \"123456\",\n  \"newPassword\": \"NewPass@123456\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base}}/auth/reset-password",
+              "host": ["{{base}}"],
+              "path": ["auth", "reset-password"]
+            },
+            "description": "Resets the password using the OTP from forgot-password."
+          }
+        },
+        {
+          "name": "Google Login",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idToken\": \"<google-id-token>\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base}}/auth/google",
+              "host": ["{{base}}"],
+              "path": ["auth", "google"]
+            },
+            "description": "Logs in / registers via Google OAuth using a Google ID token."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "Update Profile",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"John Updated\",\n  \"phone\": \"01712345678\",\n  \"address\": \"456 Dhanmondi, Dhaka\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base}}/users/profile",
+              "host": ["{{base}}"],
+              "path": ["users", "profile"]
+            },
+            "description": "Updates the logged-in user's name / phone / address (all optional). Address is also synced to the customer/courier record."
+          }
+        },
+        {
+          "name": "Upload Profile Photo",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "profilePhoto",
+                  "type": "file",
+                  "src": [],
+                  "description": "Single image file (field name must be exactly `profilePhoto`). Stored in Cloudinary."
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base}}/users/profile-photo",
+              "host": ["{{base}}"],
+              "path": ["users", "profile-photo"]
+            },
+            "description": "Uploads a profile photo (multipart/form-data). Content-Type is set automatically by Postman for multipart — do not set it manually."
+          }
+        },
+        {
+          "name": "List Users (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "query": [
+              { "key": "page", "value": "1", "description": "Page number" },
+              { "key": "limit", "value": "10", "description": "Items per page" },
+              { "key": "sortBy", "value": "createdAt" },
+              { "key": "sortOrder", "value": "desc" },
+              { "key": "searchTerm", "value": "", "description": "Searches name / email / phone", "disabled": true },
+              { "key": "status", "value": "ACTIVE", "description": "ACTIVE | BLOCKED | DELETED", "disabled": true },
+              { "key": "emailVerified", "value": "true", "disabled": true },
+              { "key": "role", "value": "CUSTOMER", "description": "CUSTOMER | COURIER | ADMIN", "disabled": true }
+            ],
+            "url": {
+              "raw": "{{base}}/users?page=1&limit=10&sortBy=createdAt&sortOrder=desc",
+              "host": ["{{base}}"],
+              "path": ["users"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" },
+                { "key": "sortBy", "value": "createdAt" },
+                { "key": "sortOrder", "value": "desc" }
+              ]
+            },
+            "description": "Paginated list of all users. **ADMIN only.** Response includes `meta` pagination."
+          }
+        },
+        {
+          "name": "User Details (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": {
+              "raw": "{{base}}/users/details/{{userId}}",
+              "host": ["{{base}}"],
+              "path": ["users", "details", "{{userId}}"]
+            },
+            "description": "Full user details by user id (includes customer & courier relations). **ADMIN only.**"
+          }
+        },
+        {
+          "name": "Update User Status (Admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"ACTIVE\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base}}/users/update-status/{{userId}}",
+              "host": ["{{base}}"],
+              "path": ["users", "update-status", "{{userId}}"]
+            },
+            "description": "Updates user status: `ACTIVE` | `BLOCKED` | `DELETED`. **ADMIN only.**"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Couriers",
+      "item": [
+        {
+          "name": "Apply as Courier",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "try {",
+                  "    const body = pm.response.json();",
+                  "    if (body?.data?.id) pm.collectionVariables.set('userId', body.data.id);",
+                  "    if (body?.data?.courier?.id) pm.collectionVariables.set('courierId', body.data.courier.id);",
+                  "} catch (e) {}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "resume",
+                  "type": "file",
+                  "src": [],
+                  "description": "Single file (PDF resume). Field name must be exactly `resume`. Uploaded to Cloudinary."
+                },
+                {
+                  "key": "data",
+                  "value": "{\n  \"name\": \"Courier Applicant\",\n  \"email\": \"courier.applicant@example.com\",\n  \"phone\": \"01812345678\",\n  \"address\": \"789 Uttara, Dhaka\"\n}",
+                  "type": "text",
+                  "description": "JSON string with name / email / phone (optional) / address (optional). Parsed server-side via JSON.parse."
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base}}/couriers",
+              "host": ["{{base}}"],
+              "path": ["couriers"]
+            },
+            "description": "Public courier application. Creates a COURIER user (status PENDING), uploads resume, emails an OTP (Redis, 1h).\n\nAuto-captures `userId` and `courierId` (Courier record id) from the response."
+          }
+        },
+        {
+          "name": "Verify Courier Email (OTP)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"courier.applicant@example.com\",\n  \"otp\": \"123456\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base}}/couriers/verify-email",
+              "host": ["{{base}}"],
+              "path": ["couriers", "verify-email"]
+            },
+            "description": "Verifies the courier application with the OTP sent to their email."
+          }
+        },
+        {
+          "name": "Review Courier (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"courierId\": \"{{courierId}}\",\n  \"verificationStatus\": \"APPROVED\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base}}/couriers/review-courier",
+              "host": ["{{base}}"],
+              "path": ["couriers", "review-courier"]
+            },
+            "description": "Approve or reject a courier application. **ADMIN only.**\n\n- `courierId` = **Courier record id** (not the user id).\n- `verificationStatus`: `APPROVED` or `REJECTED`.\n- If REJECTED, `rejectionReason` (max 500) is required.\n- On APPROVE, a random password is generated and emailed to the courier.\n\nReject body variant:\n```json\n{ \"courierId\": \"...\", \"verificationStatus\": \"REJECTED\", \"rejectionReason\": \"Incomplete documents\" }\n```"
+          }
+        },
+        {
+          "name": "List Couriers (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "query": [
+              { "key": "page", "value": "1" },
+              { "key": "limit", "value": "10" },
+              { "key": "sortBy", "value": "createdAt" },
+              { "key": "sortOrder", "value": "desc" },
+              { "key": "searchTerm", "value": "", "disabled": true, "description": "name / phone / email / address" },
+              { "key": "availabilityStatus", "value": "AVAILABLE", "disabled": true, "description": "AVAILABLE | BUSY" },
+              { "key": "verificationStatus", "value": "APPROVED", "disabled": true, "description": "PENDING | APPROVED | REJECTED" }
+            ],
+            "url": {
+              "raw": "{{base}}/couriers?page=1&limit=10&sortBy=createdAt&sortOrder=desc",
+              "host": ["{{base}}"],
+              "path": ["couriers"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" },
+                { "key": "sortBy", "value": "createdAt" },
+                { "key": "sortOrder", "value": "desc" }
+              ]
+            },
+            "description": "Paginated courier list. **ADMIN only.**"
+          }
+        },
+        {
+          "name": "Courier Details (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": {
+              "raw": "{{base}}/couriers/details/{{courierId}}",
+              "host": ["{{base}}"],
+              "path": ["couriers", "details", "{{courierId}}"]
+            },
+            "description": "Single courier record by **Courier record id**. **ADMIN only.**"
+          }
+        },
+        {
+          "name": "My Stats (Courier)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": {
+              "raw": "{{base}}/couriers/stats",
+              "host": ["{{base}}"],
+              "path": ["couriers", "stats"]
+            },
+            "description": "Earnings / completion stats for the logged-in courier. **COURIER only.** Returns `{ totalEarnings, totalCompletedShipments }`."
+          }
+        },
+        {
+          "name": "Update Availability (Courier)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"AVAILABLE\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base}}/couriers/availability-status",
+              "host": ["{{base}}"],
+              "path": ["couriers", "availability-status"]
+            },
+            "description": "Toggles availability: `AVAILABLE` | `BUSY`. **COURIER only.**"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Shipments",
+      "item": [
+        {
+          "name": "Create Shipment",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"originZoneId\": \"{{zoneId}}\",\n  \"originHubId\": \"{{hubId}}\",\n  \"destinationZoneId\": \"{{zoneId}}\",\n  \"destinationHubId\": \"{{hubId}}\",\n  \"senderName\": \"Sender Name\",\n  \"senderPhone\": \"01712345678\",\n  \"senderAddress\": \"123 Mirpur Road, Dhaka\",\n  \"receiverName\": \"Receiver Name\",\n  \"receiverPhone\": \"01812345678\",\n  \"receiverAddress\": \"456 Agrabad, Chittagong\",\n  \"weight\": 1.5,\n  \"description\": \"Package of clothes\",\n  \"isFragile\": false,\n  \"pickupInstructions\": \"Call before arrival\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base}}/shipments",
+              "host": ["{{base}}"],
+              "path": ["shipments"]
+            },
+            "description": "Creates a shipment + payment and returns a bKash checkout URL. **CUSTOMER only.**\n\n- Fee = base + additional-per-kg beyond 1 kg (depends on whether both hubs are in Dhaka).\n- `weight`: number > 0.\n- `senderPhone` / `receiverPhone`: Bangladeshi format.\n- Response (201): `{ paymentUrl: \"...\" }`\n\nRequires zones/hubs to exist first (create them via the Zones & Hubs folders as Admin)."
+          }
+        },
+        {
+          "name": "Pay Shipment (Re-initiate)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"shipmentId\": \"{{shipmentId}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base}}/shipments/pay-shipment",
+              "host": ["{{base}}"],
+              "path": ["shipments", "pay-shipment"]
+            },
+            "description": "Re-initiates payment for a shipment in `PENDING_PAYMENT` status and returns a new bKash checkout URL. **CUSTOMER only.**"
+          }
+        },
+        {
+          "name": "Payment Callback (bKash)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "query": [
+              { "key": "paymentID", "value": "<bkash-paymentID>", "description": "Supplied by bKash" },
+              { "key": "status", "value": "success", "description": "success | failure | cancel" },
+              { "key": "trxID", "value": "<bkash-trxID>", "disabled": true }
+            ],
+            "url": {
+              "raw": "{{base}}/shipments/payment/callback?paymentID=<bkash-paymentID>&status=success",
+              "host": ["{{base}}"],
+              "path": ["shipments", "payment", "callback"],
+              "query": [
+                { "key": "paymentID", "value": "<bkash-paymentID>" },
+                { "key": "status", "value": "success" }
+              ]
+            },
+            "description": "Public bKash redirect callback. Executes the payment, generates trackingId + invoice, emails the customer, then **302-redirects** to the frontend (not JSON).\n\nNormally hit by bKash/browser — can be simulated once you have a real `paymentID` from a sandbox checkout."
+          }
+        },
+        {
+          "name": "Request Pickup",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"shipmentId\": \"{{shipmentId}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base}}/shipments/request-pickup",
+              "host": ["{{base}}"],
+              "path": ["shipments", "request-pickup"]
+            },
+            "description": "Requests pickup for a `PAID` shipment → status becomes `PICKUP_REQUESTED`. **CUSTOMER only.**"
+          }
+        },
+        {
+          "name": "List All Shipments (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "query": [
+              { "key": "page", "value": "1" },
+              { "key": "limit", "value": "10" },
+              { "key": "sortBy", "value": "createdAt" },
+              { "key": "sortOrder", "value": "desc" },
+              { "key": "searchTerm", "value": "", "disabled": true, "description": "description / sender / receiver / phone / trackingId" },
+              { "key": "status", "value": "PAID", "disabled": true, "description": "ShipmentStatus enum" },
+              { "key": "customerId", "value": "", "disabled": true },
+              { "key": "courierId", "value": "", "disabled": true },
+              { "key": "trackingId", "value": "", "disabled": true }
+            ],
+            "url": {
+              "raw": "{{base}}/shipments?page=1&limit=10&sortBy=createdAt&sortOrder=desc",
+              "host": ["{{base}}"],
+              "path": ["shipments"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" },
+                { "key": "sortBy", "value": "createdAt" },
+                { "key": "sortOrder", "value": "desc" }
+              ]
+            },
+            "description": "Paginated list of all shipments. **ADMIN only.**"
+          }
+        },
+        {
+          "name": "Shipment Details",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": {
+              "raw": "{{base}}/shipments/details/{{shipmentId}}",
+              "host": ["{{base}}"],
+              "path": ["shipments", "details", "{{shipmentId}}"]
+            },
+            "description": "Single shipment (with customer, courier, payment, zones, hubs). **ADMIN / CUSTOMER / COURIER** — customers only see their own, couriers only assigned ones."
+          }
+        },
+        {
+          "name": "Cancel Shipment",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": {
+              "raw": "{{base}}/shipments/cancel/{{shipmentId}}",
+              "host": ["{{base}}"],
+              "path": ["shipments", "cancel", "{{shipmentId}}"]
+            },
+            "description": "Cancels an own shipment in `PENDING_PAYMENT` / `PAID` / `PICKUP_REQUESTED` / `COURIER_ASSIGNED`. If already paid, triggers a bKash refund (payment → `REFUNDED`). **CUSTOMER only.**\n\nResponse: `{ updatedShipment, newPaymentInfo }`."
+          }
+        },
+        {
+          "name": "Assign Courier (Admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"courierId\": \"{{courierId}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base}}/shipments/assign-courier/{{shipmentId}}",
+              "host": ["{{base}}"],
+              "path": ["shipments", "assign-courier", "{{shipmentId}}"]
+            },
+            "description": "Assigns an APPROVED + AVAILABLE courier to a `PICKUP_REQUESTED` shipment → `COURIER_ASSIGNED`. **ADMIN only.**\n\n`courierId` = Courier record id (not user id)."
+          }
+        },
+        {
+          "name": "My Assigned Shipments (Courier)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "query": [
+              { "key": "page", "value": "1" },
+              { "key": "limit", "value": "10" },
+              { "key": "sortBy", "value": "createdAt" },
+              { "key": "sortOrder", "value": "asc", "description": "Default is asc for this endpoint" },
+              { "key": "status", "value": "COURIER_ASSIGNED", "disabled": true, "description": "ShipmentStatus enum" }
+            ],
+            "url": {
+              "raw": "{{base}}/shipments/assigned?page=1&limit=10&sortBy=createdAt&sortOrder=asc",
+              "host": ["{{base}}"],
+              "path": ["shipments", "assigned"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" },
+                { "key": "sortBy", "value": "createdAt" },
+                { "key": "sortOrder", "value": "asc" }
+              ]
+            },
+            "description": "Shipments assigned to the logged-in courier. **COURIER only.**"
+          }
+        },
+        {
+          "name": "Update Status (Courier)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"PICKED_UP\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base}}/shipments/update-status/{{shipmentId}}",
+              "host": ["{{base}}"],
+              "path": ["shipments", "update-status", "{{shipmentId}}"]
+            },
+            "description": "Advances the shipment along the strict status chain. **COURIER only** (must be the assigned courier).\n\nAllowed transitions:\n- `COURIER_ASSIGNED` → `PICKED_UP`\n- `PICKED_UP` → `AT_ORIGIN_HUB`\n- `AT_ORIGIN_HUB` → `IN_TRANSIT`\n- `IN_TRANSIT` → `AT_DESTINATION_HUB`\n- `AT_DESTINATION_HUB` → `OUT_FOR_DELIVERY`\n- `OUT_FOR_DELIVERY` → `DELIVERED` or `DELIVERY_FAILED`\n- `DELIVERY_FAILED` → `RETURNED` (requires `returnReason`, max 500)\n\nEach update creates a tracking entry; DELIVERED/RETURNED email the customer."
+          }
+        },
+        {
+          "name": "My Shipments (Customer)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "try {",
+                  "    const body = pm.response.json();",
+                  "    const first = body?.data?.[0];",
+                  "    if (first?.id) pm.collectionVariables.set('shipmentId', first.id);",
+                  "    if (first?.trackingId) pm.collectionVariables.set('trackingId', first.trackingId);",
+                  "} catch (e) {}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "query": [
+              { "key": "page", "value": "1" },
+              { "key": "limit", "value": "10" },
+              { "key": "sortBy", "value": "createdAt" },
+              { "key": "sortOrder", "value": "desc" },
+              { "key": "searchTerm", "value": "", "disabled": true },
+              { "key": "status", "value": "", "disabled": true, "description": "ShipmentStatus enum" }
+            ],
+            "url": {
+              "raw": "{{base}}/shipments/my-shipments?page=1&limit=10&sortBy=createdAt&sortOrder=desc",
+              "host": ["{{base}}"],
+              "path": ["shipments", "my-shipments"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" },
+                { "key": "sortBy", "value": "createdAt" },
+                { "key": "sortOrder", "value": "desc" }
+              ]
+            },
+            "description": "Logged-in customer's shipments. **CUSTOMER only.** Auto-captures `shipmentId` and `trackingId` from the first result."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Payments",
+      "item": [
+        {
+          "name": "My Payments (Customer)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "query": [
+              { "key": "page", "value": "1" },
+              { "key": "limit", "value": "10" },
+              { "key": "sortBy", "value": "createdAt" },
+              { "key": "sortOrder", "value": "desc" },
+              { "key": "searchTerm", "value": "", "disabled": true, "description": "payment id or bkashTrxId" },
+              { "key": "status", "value": "PAID", "disabled": true, "description": "UNPAID | PAID | CANCELLED | FAILED | REFUNDED" }
+            ],
+            "url": {
+              "raw": "{{base}}/payments/my-payments?page=1&limit=10&sortBy=createdAt&sortOrder=desc",
+              "host": ["{{base}}"],
+              "path": ["payments", "my-payments"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" },
+                { "key": "sortBy", "value": "createdAt" },
+                { "key": "sortOrder", "value": "desc" }
+              ]
+            },
+            "description": "Logged-in customer's payments. **CUSTOMER only.**"
+          }
+        },
+        {
+          "name": "Payment Details",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": {
+              "raw": "{{base}}/payments/details/{{paymentId}}",
+              "host": ["{{base}}"],
+              "path": ["payments", "details", "{{paymentId}}"]
+            },
+            "description": "Single payment. **CUSTOMER / ADMIN** — customers only see their own, and `companyEarning` / `courierEarning` are stripped for customers."
+          }
+        },
+        {
+          "name": "List All Payments (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "query": [
+              { "key": "page", "value": "1" },
+              { "key": "limit", "value": "10" },
+              { "key": "sortBy", "value": "createdAt" },
+              { "key": "sortOrder", "value": "desc" },
+              { "key": "searchTerm", "value": "", "disabled": true },
+              { "key": "status", "value": "PAID", "disabled": true, "description": "PaymentStatus enum" }
+            ],
+            "url": {
+              "raw": "{{base}}/payments?page=1&limit=10&sortBy=createdAt&sortOrder=desc",
+              "host": ["{{base}}"],
+              "path": ["payments"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" },
+                { "key": "sortBy", "value": "createdAt" },
+                { "key": "sortOrder", "value": "desc" }
+              ]
+            },
+            "description": "Paginated list of all payments. **ADMIN only.**"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Tracking",
+      "item": [
+        {
+          "name": "Get Tracking Timeline",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": {
+              "raw": "{{base}}/trackings/{{trackingId}}",
+              "host": ["{{base}}"],
+              "path": ["trackings", "{{trackingId}}"]
+            },
+            "description": "Returns the tracking timeline (array of `{ id, shipmentId, status, createdAt }`, oldest first).\n\n**CUSTOMER / ADMIN** — customers must own the shipment; admins can track any.\n\n`trackingId` is the shipment's **tracking ID** (generated at payment time), not the shipment DB id."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Stats",
+      "item": [
+        {
+          "name": "Platform Stats (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": {
+              "raw": "{{base}}/stats",
+              "host": ["{{base}}"],
+              "path": ["stats"]
+            },
+            "description": "Overall platform statistics: `{ totalEarnings, totalCompletedShipments, totalCouriers, totalCustomers }`. **ADMIN only.**"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Zones",
+      "item": [
+        {
+          "name": "Create Zone (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200/201', () => pm.response.to.have.status(200) || pm.response.to.have.status(201));",
+                  "try {",
+                  "    const body = pm.response.json();",
+                  "    if (body?.data?.id) pm.collectionVariables.set('zoneId', body.data.id);",
+                  "} catch (e) {}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Dhaka North\",\n  \"area\": \"Mirpur, Uttara, Pallabi\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base}}/zones",
+              "host": ["{{base}}"],
+              "path": ["zones"]
+            },
+            "description": "Creates a zone. **ADMIN only.**\n\n- `name`: 3–100, globally unique.\n- `area`: 4–255.\n\nAuto-captures `zoneId`. Note: there is no GET/list endpoint for zones."
+          }
+        },
+        {
+          "name": "Update Zone (Admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Dhaka North Updated\",\n  \"area\": \"Mirpur, Uttara\",\n  \"status\": \"ACTIVE\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base}}/zones/{{zoneId}}",
+              "host": ["{{base}}"],
+              "path": ["zones", "{{zoneId}}"]
+            },
+            "description": "Updates a zone (all fields optional). `status`: `ACTIVE` | `INACTIVE`. **ADMIN only.**"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Hubs",
+      "item": [
+        {
+          "name": "Create Hub (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200/201', () => pm.response.to.have.status(200) || pm.response.to.have.status(201));",
+                  "try {",
+                  "    const body = pm.response.json();",
+                  "    if (body?.data?.id) pm.collectionVariables.set('hubId', body.data.id);",
+                  "} catch (e) {}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Mirpur Hub\",\n  \"location\": \"Mirpur-10, Dhaka\",\n  \"isInDhaka\": true,\n  \"zoneId\": \"{{zoneId}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base}}/hubs",
+              "host": ["{{base}}"],
+              "path": ["hubs"]
+            },
+            "description": "Creates a hub. **ADMIN only.**\n\n- `name`: 3–100, unique.\n- `location`: 3–255.\n- `isInDhaka`: boolean (affects shipment pricing).\n- `zoneId`: must reference an existing zone.\n\nAuto-captures `hubId`. Create a second hub for the destination when testing shipments."
+          }
+        },
+        {
+          "name": "Update Hub (Admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Mirpur Hub Main\",\n  \"location\": \"Mirpur-10, Dhaka\",\n  \"isInDhaka\": true,\n  \"zoneId\": \"{{zoneId}}\",\n  \"status\": \"ACTIVE\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base}}/hubs/{{hubId}}",
+              "host": ["{{base}}"],
+              "path": ["hubs", "{{hubId}}"]
+            },
+            "description": "Updates a hub (all fields optional). `status`: `ACTIVE` | `INACTIVE`. **ADMIN only.**\n\nNote: there is no GET/list endpoint for hubs."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Pricings",
+      "item": [
+        {
+          "name": "Create Pricing (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200/201', () => pm.response.to.have.status(200) || pm.response.to.have.status(201));",
+                  "try {",
+                  "    const body = pm.response.json();",
+                  "    if (body?.data?.id) pm.collectionVariables.set('pricingId', body.data.id);",
+                  "} catch (e) {}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Inside Dhaka Standard\",\n  \"insideDhaka\": true,\n  \"base\": 60,\n  \"additionalPerKg\": 20,\n  \"courierEarning\": 30\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base}}/pricings",
+              "host": ["{{base}}"],
+              "path": ["pricings"]
+            },
+            "description": "Creates a pricing plan. **ADMIN only.**\n\n- `name`: 3–100.\n- `insideDhaka`: boolean (inside-Dhaka vs outside pricing).\n- `base`, `additionalPerKg`, `courierEarning`: numbers ≥ 0.\n\nAuto-captures `pricingId`. Note: there is no GET/list endpoint for pricings."
+          }
+        },
+        {
+          "name": "Update Pricing (Admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Inside Dhaka Standard\",\n  \"insideDhaka\": true,\n  \"base\": 60,\n  \"additionalPerKg\": 20,\n  \"courierEarning\": 30\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base}}/pricings/{{pricingId}}",
+              "host": ["{{base}}"],
+              "path": ["pricings", "{{pricingId}}"]
+            },
+            "description": "Updates a pricing plan (all fields optional, all numbers ≥ 0; `name` min 2). **ADMIN only.**"
+          }
+        }
+      ]
+    }
+  ]
+}

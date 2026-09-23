@@ -1,6 +1,5 @@
 import app from "./app";
 import config from "./app/config";
-import { deleteUnverifiedCouriers } from "./app/lib/cron";
 import { transporter } from "./app/lib/nodemailer";
 import { prisma } from "./app/lib/prisma";
 import { redisClient } from "./app/lib/redis";
@@ -18,8 +17,6 @@ const main = async () => {
     console.log("Nodemailer connected successfully.");
     await seedAdmin();
     await seedCourier();
-
-    await deleteUnverifiedCouriers();
 
     app.listen(PORT, () => {
       console.log(`Server is running on port ${PORT}`);
