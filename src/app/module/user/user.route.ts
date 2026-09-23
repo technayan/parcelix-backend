@@ -19,4 +19,14 @@ router.patch(
   UserController.uploadProfilePhoto,
 );
 
+router.get("/", auth(Role.ADMIN), UserController.getAllUsers);
+
+router.get("/details/:userId", auth(Role.ADMIN), UserController.getUserById);
+
+router.patch(
+  "/update-status/:userId",
+  auth(Role.ADMIN),
+  UserController.updateUserStatus,
+);
+
 export const UserRoutes = router;
