@@ -78,16 +78,9 @@ const getMyPayments = async (query: IQuery, userId: string) => {
 
 //* Get Payment by ID
 const getPaymentById = async (paymentId: string, user: IRequestUser) => {
-  if (user.role === Role.COURIER) {
-    throw new AppError(
-      httpStatus.FORBIDDEN,
-      "You have no permission to access this resource.",
-    );
-  }
-
   const payment = await prisma.payment.findUnique({
     where: { id: paymentId },
-    omit: { getwayResponse: true, companyEarning: true, courierEarning: true },
+    omit: { getwayResponse: true },
     include: {
       shipment: { select: { customer: { select: { userId: true } } } },
     },
@@ -105,6 +98,13 @@ const getPaymentById = async (paymentId: string, user: IRequestUser) => {
       httpStatus.FORBIDDEN,
       "You have no permission to access this resource.",
     );
+  }
+
+  // Restrict Customer to see companyEarning and courierEarning
+  if (user.role === Role.CUSTOMER) {
+    const { companyEarning, courierEarning, ...customerPayment } = payment;
+
+    return customerPayment;
   }
 
   return payment;
