@@ -33,7 +33,8 @@ const updateZone = catchAsync(async (req: Request, res: Response) => {
 
 //* Get Zones
 const getZones = catchAsync(async (req: Request, res: Response) => {
-  const result = await ZoneServices.getZones();
+  const query = req.query;
+  const result = await ZoneServices.getZones(query);
 
   sendResponse(res, {
     success: true,

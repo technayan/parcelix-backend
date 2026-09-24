@@ -33,7 +33,8 @@ const updatePricing = catchAsync(async (req: Request, res: Response) => {
 
 //* Get Pricings
 const getPricings = catchAsync(async (req: Request, res: Response) => {
-  const result = await PricingServices.getPricings();
+  const query = req.query;
+  const result = await PricingServices.getPricings(query);
 
   sendResponse(res, {
     success: true,

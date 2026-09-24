@@ -33,7 +33,8 @@ const updateHub = catchAsync(async (req: Request, res: Response) => {
 
 //* Get Hubs
 const getHubs = catchAsync(async (req: Request, res: Response) => {
-  const result = await HubServices.getHubs();
+  const query = req.query;
+  const result = await HubServices.getHubs(query);
 
   sendResponse(res, {
     success: true,
