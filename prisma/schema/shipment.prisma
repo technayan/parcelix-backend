@@ -36,5 +36,9 @@ model Shipment {
     trackings          TrackingShipment[]
     payment            Payment?
 
+    @@index([customerId, status, createdAt(Desc)])
+    @@index([courierId, status, createdAt(Desc)])
+    @@index([courierId, createdAt(Desc)])
+    @@index([status, createdAt(Desc)])
     @@map("shipments")
 }

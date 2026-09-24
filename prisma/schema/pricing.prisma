@@ -8,5 +8,6 @@ model Pricing {
     createdAt       DateTime @default(now())
     updatedAt       DateTime @updatedAt
 
+    @@index([insideDhaka])
     @@map("pricings")
 }

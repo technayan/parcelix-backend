@@ -18,5 +18,6 @@ model User {
     customer             Customer?
     courier              Courier?
 
+    @@index([role, status, createdAt(Desc)])
     @@map("users")
 }

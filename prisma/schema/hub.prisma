@@ -11,5 +11,6 @@ model Hub {
     originShipments      Shipment[] @relation("OriginHub")
     destinationShipments Shipment[] @relation("DestinationHub")
 
+    @@index([zoneId, status])
     @@map("hubs")
 }

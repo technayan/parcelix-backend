@@ -13,5 +13,6 @@ model Courier {
     updatedAt          DateTime                  @updatedAt
     shipments          Shipment[]
 
+    @@index([availabilityStatus, verificationStatus])
     @@map("couriers")
 }
