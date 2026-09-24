@@ -19,5 +19,6 @@ router.patch(
   validateRequest(pricingValidation.UpdatePricingZodSchema),
   PricingController.updatePricing,
 );
+router.get("", PricingController.getPricings);
 
 export const PricingRoutes = router;

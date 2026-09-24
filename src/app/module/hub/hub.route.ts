@@ -19,5 +19,6 @@ router.patch(
   validateRequest(hubValidation.UpdateHubZodSchema),
   HubController.updateHub,
 );
+router.get("", HubController.getHubs);
 
 export const HubRoutes = router;

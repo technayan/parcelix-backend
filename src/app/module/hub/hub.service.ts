@@ -34,4 +34,10 @@ const updateHub = async (hubId: string, payload: IUpdateHubPayload) => {
   return updatedHub;
 };
 
-export const HubServices = { createHub, updateHub };
+//* Get Hubs
+const getHubs = async () => {
+  const hubs = await prisma.hub.findMany();
+  return hubs;
+};
+
+export const HubServices = { createHub, updateHub, getHubs };

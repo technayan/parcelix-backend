@@ -31,4 +31,16 @@ const updatePricing = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
-export const PricingController = { createPricing, updatePricing };
+//* Get Pricings
+const getPricings = catchAsync(async (req: Request, res: Response) => {
+  const result = await PricingServices.getPricings();
+
+  sendResponse(res, {
+    success: true,
+    statusCode: httpStatus.OK,
+    message: "Pricings fetched successfully.",
+    data: result,
+  });
+});
+
+export const PricingController = { createPricing, updatePricing, getPricings };

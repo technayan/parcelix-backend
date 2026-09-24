@@ -40,4 +40,10 @@ const updatePricing = async (
   return updatedPricing;
 };
 
-export const PricingServices = { createPricing, updatePricing };
+//* Get Pricings
+const getPricings = async () => {
+  const pricings = await prisma.pricing.findMany();
+  return pricings;
+};
+
+export const PricingServices = { createPricing, updatePricing, getPricings };

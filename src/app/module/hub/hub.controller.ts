@@ -31,4 +31,16 @@ const updateHub = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
-export const HubController = { createHub, updateHub };
+//* Get Hubs
+const getHubs = catchAsync(async (req: Request, res: Response) => {
+  const result = await HubServices.getHubs();
+
+  sendResponse(res, {
+    success: true,
+    statusCode: httpStatus.OK,
+    message: "Hubs fetched successfully.",
+    data: result,
+  });
+});
+
+export const HubController = { createHub, updateHub, getHubs };

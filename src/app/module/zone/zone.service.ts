@@ -34,4 +34,10 @@ const updateZone = async (zoneId: string, payload: IUpdateZonePayload) => {
   return updatedZone;
 };
 
-export const ZoneServices = { createZone, updateZone };
+//* Get Zones
+const getZones = async () => {
+  const zones = await prisma.zone.findMany();
+  return zones;
+};
+
+export const ZoneServices = { createZone, updateZone, getZones };
