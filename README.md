@@ -277,10 +277,13 @@ Base URL: `http://localhost:5000` (development) · `/api/v1` prefix
 
 | Method | Endpoint              | Access | Description              |
 | ------ | --------------------- | ------ | ------------------------ |
+| GET    | `/zones`              | Public | List all zones           |
 | POST   | `/zones`              | Admin  | Create a zone            |
 | PATCH  | `/zones/:zoneId`      | Admin  | Update a zone            |
+| GET    | `/hubs`               | Public | List all hubs            |
 | POST   | `/hubs`               | Admin  | Create a hub             |
 | PATCH  | `/hubs/:hubId`        | Admin  | Update a hub             |
+| GET    | `/pricings`           | Public | List all pricings        |
 | POST   | `/pricings`           | Admin  | Create a pricing rule    |
 | PATCH  | `/pricings/:pricingId`| Admin  | Update a pricing rule    |
 
