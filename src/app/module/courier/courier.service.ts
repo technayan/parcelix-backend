@@ -357,6 +357,7 @@ const getAllCouriers = async (query: IQuery) => {
       address: true,
       availabilityStatus: true,
       verificationStatus: true,
+      resume: true,
       user: {
         select: {
           id: true,
