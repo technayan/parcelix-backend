@@ -353,7 +353,7 @@ const payShipmentCallback = async (query: Record<string, any>) => {
         });
 
         return {
-          redirectUrl: `${config.frontend_url}/dashboard/shipments?status=success`,
+          redirectUrl: `${config.frontend_url}/payment?status=success`,
         };
       } else if (status === "failure") {
         await tx.payment.update({
@@ -364,7 +364,7 @@ const payShipmentCallback = async (query: Record<string, any>) => {
           },
         });
         return {
-          redirectUrl: `${config.frontend_url}/dashboard/shipments?status=failure`,
+          redirectUrl: `${config.frontend_url}/payment?status=failure`,
         };
       } else if (status === "cancel") {
         await tx.payment.update({
@@ -375,11 +375,11 @@ const payShipmentCallback = async (query: Record<string, any>) => {
           },
         });
         return {
-          redirectUrl: `${config.frontend_url}/dashboard/shipments?status=cancel`,
+          redirectUrl: `${config.frontend_url}/payment?status=cancel`,
         };
       } else {
         return {
-          redirectUrl: `${config.frontend_url}/dashboard/shipments?error=payment-failed`,
+          redirectUrl: `${config.frontend_url}/payment?error=payment-failed`,
         };
       }
     },

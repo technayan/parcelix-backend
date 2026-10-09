@@ -34,13 +34,14 @@ const updateZone = catchAsync(async (req: Request, res: Response) => {
 //* Get Zones
 const getZones = catchAsync(async (req: Request, res: Response) => {
   const query = req.query;
-  const result = await ZoneServices.getZones(query);
+  const { data, meta } = await ZoneServices.getZones(query);
 
   sendResponse(res, {
     success: true,
     statusCode: httpStatus.OK,
     message: "Zones fetched successfully.",
-    data: result,
+    data: data,
+    meta: meta,
   });
 });
 

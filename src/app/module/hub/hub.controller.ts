@@ -34,13 +34,14 @@ const updateHub = catchAsync(async (req: Request, res: Response) => {
 //* Get Hubs
 const getHubs = catchAsync(async (req: Request, res: Response) => {
   const query = req.query;
-  const result = await HubServices.getHubs(query);
+  const { data, meta } = await HubServices.getHubs(query);
 
   sendResponse(res, {
     success: true,
     statusCode: httpStatus.OK,
     message: "Hubs fetched successfully.",
-    data: result,
+    data: data,
+    meta: meta,
   });
 });
 
