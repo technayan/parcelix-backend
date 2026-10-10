@@ -783,6 +783,20 @@ const getAssignedShipments = async (query: IQuery, userId: string) => {
 
     andConditions.push({ courierId: courier.id });
 
+    if (query.searchTerm) {
+      andConditions.push({
+        OR: [
+          { senderName: { contains: query.searchTerm, mode: "insensitive" } },
+          { receiverName: { contains: query.searchTerm, mode: "insensitive" } },
+          { senderPhone: { contains: query.searchTerm, mode: "insensitive" } },
+          {
+            receiverPhone: { contains: query.searchTerm, mode: "insensitive" },
+          },
+          { trackingId: { contains: query.searchTerm, mode: "insensitive" } },
+        ],
+      });
+    }
+
     if (query.status) {
       andConditions.push({ status: query.status });
     }
@@ -794,9 +808,13 @@ const getAssignedShipments = async (query: IQuery, userId: string) => {
       orderBy: { [sortBy]: sortOrder },
       select: {
         id: true,
+        trackingId: true,
         courierId: true,
         customerId: true,
         senderName: true,
+        receiverName: true,
+        senderPhone: true,
+        receiverPhone: true,
         status: true,
         originZone: { select: { name: true } },
         originHub: { select: { name: true } },
