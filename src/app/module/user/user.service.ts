@@ -150,6 +150,8 @@ const getAllUsers = async (query: IQuery) => {
 
   const andConditions: UserWhereInput[] = [];
 
+  andConditions.push({ isDeleted: false });
+
   if (query.searchTerm) {
     andConditions.push({
       OR: [

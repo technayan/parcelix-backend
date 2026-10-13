@@ -768,7 +768,7 @@ const getAssignedShipments = async (query: IQuery, userId: string) => {
   const page = query.page ? Number(query.page) : 1;
   const skip = (page - 1) * limit;
   const sortBy = query.sortBy ? query.sortBy : "createdAt";
-  const sortOrder = query.sortOrder ? query.sortOrder : "asc";
+  const sortOrder = query.sortOrder ? query.sortOrder : "desc";
 
   const transactionResult = await prisma.$transaction(async (tx) => {
     const courier = await tx.courier.findUnique({

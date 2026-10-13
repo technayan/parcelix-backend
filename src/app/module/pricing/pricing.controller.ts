@@ -34,13 +34,14 @@ const updatePricing = catchAsync(async (req: Request, res: Response) => {
 //* Get Pricings
 const getPricings = catchAsync(async (req: Request, res: Response) => {
   const query = req.query;
-  const result = await PricingServices.getPricings(query);
+  const { data, meta } = await PricingServices.getPricings(query);
 
   sendResponse(res, {
     success: true,
     statusCode: httpStatus.OK,
     message: "Pricings fetched successfully.",
-    data: result,
+    data: data,
+    meta: meta,
   });
 });
 

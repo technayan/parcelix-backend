@@ -41,13 +41,14 @@ const uploadProfilePhoto = catchAsync(async (req: Request, res: Response) => {
 
 //* Get All Users
 const getAllUsers = catchAsync(async (req: Request, res: Response) => {
-  const result = await UserServices.getAllUsers(req.query);
+  const {data, meta} = await UserServices.getAllUsers(req.query);
 
   sendResponse(res, {
     success: true,
     statusCode: httpStatus.OK,
     message: "Users fetched successfully.",
-    data: result,
+    data: data,
+    meta: meta
   });
 });
 
