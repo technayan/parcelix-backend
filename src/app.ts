@@ -9,6 +9,7 @@ import httpStatus from "http-status";
 import config from "./app/config";
 import { globalErrorHandler } from "./app/middleware/globalErrorHandler";
 import { notFound } from "./app/middleware/notFound";
+import { aiAssistantRoutes } from "./app/module/ai-assistant/ai-assistant.route";
 import { AuthRoutes } from "./app/module/auth/auth.route";
 import { CourierRoutes } from "./app/module/courier/courier.route";
 import { HubRoutes } from "./app/module/hub/hub.route";
@@ -46,6 +47,7 @@ app.use("/api/v1/stats", StatsRoutes);
 app.use("/api/v1/zones", ZoneRoutes);
 app.use("/api/v1/hubs", HubRoutes);
 app.use("/api/v1/pricings", PricingRoutes);
+app.use("/api/v1/ai-assistant", aiAssistantRoutes);
 
 // Basic route
 app.get("/", async (req: Request, res: Response) => {

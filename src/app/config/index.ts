@@ -37,4 +37,6 @@ export default {
   bkash_app_key: process.env.BKASH_APP_KEY as string,
   bkash_app_secret: process.env.BKASH_APP_SECRET,
   bkash_callback_url: process.env.BKASH_CALLBACK_URL,
+  gemini_api_key: process.env.GEMINI_API_KEY as string,
+  gemini_model: process.env.GEMINI_MODEL,
 };
