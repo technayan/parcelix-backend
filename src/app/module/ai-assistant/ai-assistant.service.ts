@@ -9,7 +9,7 @@ if (!apiKey) {
 
 const ai = new GoogleGenAI({ apiKey });
 
-const model = config.gemini_model || "gemini-2.5-flash";
+const model = config.gemini_model || "gemini-3.8-flash";
 
 const systemInstruction = `
 You are the official AI assistant for Parcelix, a courier and
@@ -62,6 +62,53 @@ export type ChatMessage = {
   content: string;
 };
 
+const sleep = (ms: number) =>
+  new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+function getHttpStatus(error: unknown): number | undefined {
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "status" in error &&
+    typeof error.status === "number"
+  ) {
+    return error.status;
+  }
+
+  return undefined;
+}
+
+async function withGeminiRetry<T>(
+  operation: () => Promise<T>,
+  maxAttempts = 3,
+): Promise<T> {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await operation();
+    } catch (error) {
+      const status = getHttpStatus(error);
+
+      const retryable =
+        status === 429 ||
+        status === 500 ||
+        status === 502 ||
+        status === 503 ||
+        status === 504;
+
+      if (!retryable || attempt === maxAttempts) {
+        throw error;
+      }
+
+      const delay = 1000 * 2 ** (attempt - 1);
+      const jitter = Math.floor(Math.random() * 250);
+
+      await sleep(delay + jitter);
+    }
+  }
+
+  throw new Error("Gemini request failed after retries.");
+}
+
 export async function generateAssistantReply(
   messages: ChatMessage[],
 ): Promise<string> {
@@ -70,15 +117,17 @@ export async function generateAssistantReply(
     parts: [{ text: message.content }],
   }));
 
-  const response = await ai.models.generateContent({
-    model,
-    contents,
-    config: {
-      systemInstruction,
-      temperature: 0.4,
-      maxOutputTokens: 500,
-    },
-  });
+  const response = await withGeminiRetry(() =>
+    ai.models.generateContent({
+      model,
+      contents,
+      config: {
+        systemInstruction,
+        temperature: 0.4,
+        maxOutputTokens: 500,
+      },
+    }),
+  );
 
   const answer = response.text?.trim();
 
