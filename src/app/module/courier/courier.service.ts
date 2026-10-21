@@ -456,6 +456,9 @@ const getCourierStats = async (userId: string) => {
     return {
       totalEarnings: earnings._sum.courierEarning ?? 0,
       totalCompletedShipments: deliveredCount + returnedCount,
+      averageEarnings:
+        Number(earnings._sum.courierEarning) /
+        Number(deliveredCount + returnedCount),
     };
   });
 

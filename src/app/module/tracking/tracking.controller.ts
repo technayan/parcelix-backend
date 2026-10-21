@@ -7,9 +7,8 @@ import { TrackingServices } from "./tracking.service";
 //* Tracking Shipment
 const trackingShipment = catchAsync(async (req: Request, res: Response) => {
   const trackingId = req.params.trackingId as string;
-  const user = req.user;
 
-  const result = await TrackingServices.trackingShipment(trackingId, user!);
+  const result = await TrackingServices.trackingShipment(trackingId);
 
   sendResponse(res, {
     success: true,
