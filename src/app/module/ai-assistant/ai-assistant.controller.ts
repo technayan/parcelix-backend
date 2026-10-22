@@ -27,7 +27,7 @@ export async function chatWithAssistant(
     });
   } catch (error) {
     // Log the diagnostic on the server, never the API key.
-    console.error("Parcelix Gemini assistant error:", error);
+    console.error("Parcelix assistant error:", error);
 
     res.status(503).json({
       success: false,
